@@ -7,7 +7,7 @@ import {
   Tramite, 
   TipoBeneficiario, 
   User,
-  Bitacora
+  Bitácora
 } from './types';
 import { dbService, ensureSession, loginWithMatricula, logoutSession, adminCreateCapturista, adminResetPassword, changeOwnPassword, AuthError, validatePasswordStrength, canAccessTabByRole, canAuthorizeImporte, validateLoginInput, validateNuevoTramiteStep1, validateNuevoTramiteStep2, UX_MESSAGES, TABS_BY_ROLE, SESSION_INVALID_TOKENS } from './services/db';
 import { 
@@ -244,7 +244,7 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
     setUserMenuOpen(false);
     setShowChangePasswordModal(false);
-    setUiMessage('Sesion cerrada correctamente.');
+    setUiMessage('sesión cerrada correctamente.');
   };
 
   const gastoMetrics = useMemo(() => {
@@ -286,7 +286,7 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const newId = await dbService.saveTramite(newTramite);
-      await dbService.addBitacora({
+      await dbService.addBitácora({
         tramiteId: newId,
         usuario: user.nombre,
         accion: 'CREACION CLOUD',
@@ -353,8 +353,8 @@ const App: React.FC = () => {
     };
 
     try {
-      const bitacoraActual = await dbService.getBitacora(selectedTramite.id);
-      const impresionesPrevias = bitacoraActual.filter(
+      const BitácoraActual = await dbService.getBitácora(selectedTramite.id);
+      const impresionesPrevias = BitácoraActual.filter(
         (b) => b.categoria === 'IMPRESION' && b.datos?.documento === type
       ).length;
 
@@ -376,10 +376,10 @@ const App: React.FC = () => {
         motivoReimpresion
       };
 
-      // abrir vista de impresion aunque falle la bitacora
+      // abrir vista de impresion aunque falle la Bitácora
       setPrintConfig({ show: true, type, metadata });
 
-      await dbService.addBitacora({
+      await dbService.addBitácora({
         tramiteId: selectedTramite.id,
         usuario: user.nombre,
         accion: 'IMPRESION_DOCUMENTO',
@@ -405,7 +405,7 @@ const App: React.FC = () => {
       }
       // fallback: permitir impresion aunque falle registro secundario
       setPrintConfig({ show: true, type, metadata });
-      setUiMessage('Se abrio la vista de impresion, pero fallo el registro en bitacora.');
+      setUiMessage('Se abrio la vista de impresion, pero fallo el registro en Bitácora.');
     } finally {
       setLoading(false);
     }
@@ -420,29 +420,83 @@ const App: React.FC = () => {
     if (apellidoMaterno === null) return;
     const nss = window.prompt('NSS titular:', tramite.beneficiario?.nssTrabajador || '');
     if (nss === null) return;
+    const entidadLaboral = window.prompt('Unidad/adscripcion laboral:', tramite.beneficiario?.entidadLaboral || '');
+    if (entidadLaboral === null) return;
+    const matricula = window.prompt('Matricula:', tramite.beneficiario?.matricula || '');
+    if (matricula === null) return;
+    const claveAdscripcion = window.prompt('Clave adscripcion:', tramite.beneficiario?.claveAdscripcion || '');
+    if (claveAdscripcion === null) return;
+    const tipoContratacion = window.prompt('Tipo de contratacion:', tramite.beneficiario?.tipoContratacion || '');
+    if (tipoContratacion === null) return;
+    const contratoColectivoAplicable = window.prompt('Contrato colectivo aplicable (obligatorio):', tramite.contratoColectivoAplicable || '');
+    if (contratoColectivoAplicable === null) return;
+
     const folioReceta = window.prompt('Folio de receta:', tramite.folioRecetaImss || '');
     if (folioReceta === null) return;
     const descripcion = window.prompt('Diagnostico/descripcion de lente:', tramite.descripcionLente || '');
     if (descripcion === null) return;
+    const medicionAnteojos = window.prompt('Medicion de anteojos (opcional, dejar vacio si no aplica):', tramite.medicionAnteojos || '');
+    if (medicionAnteojos === null) return;
+    const qnaInclusion = window.prompt('Qna/Periodo de inclusion:', tramite.qnaInclusion || '');
+    if (qnaInclusion === null) return;
 
     setLoading(true);
     try {
       await dbService.saveTramite({
         id: tramite.id,
+        contratoColectivoAplicable: contratoColectivoAplicable.trim(),
         beneficiario: {
           ...tramite.beneficiario,
           nombre: nombre.trim(),
           apellidoPaterno: apellidoPaterno.trim(),
           apellidoMaterno: apellidoMaterno.trim(),
-          nssTrabajador: String(nss).replace(/\D/g, '').slice(0, 11)
+          nssTrabajador: String(nss).replace(/\D/g, '').slice(0, 11),
+          entidadLaboral: entidadLaboral.trim(),
+          matricula: matricula.trim(),
+          claveAdscripcion: claveAdscripcion.trim(),
+          tipoContratacion: tipoContratacion.trim()
         },
         folioRecetaImss: folioReceta.trim(),
-        descripcionLente: descripcion.trim()
+        descripcionLente: descripcion.trim(),
+        medicionAnteojos: (medicionAnteojos || '').trim(),
+        qnaInclusion: qnaInclusion.trim()
       } as Partial<Tramite>);
+      await dbService.addBitácora({
+        tramiteId: tramite.id,
+        usuario: user.nombre,
+        accion: 'EDICION_CAPTURA_COMPLETA',
+        categoria: 'WORKFLOW',
+        descripcion: `Captura actualizada de forma integral para folio ${tramite.folio}.`
+      });
       await loadData();
       setUiMessage('Captura actualizada correctamente.');
     } catch (e: any) {
       setUiMessage(e?.message || 'No se pudo actualizar la captura.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTramite = async (tramite: Tramite) => {
+    if (!user) return;
+    const confirmed = window.confirm(`Se eliminara la solicitud ${tramite.folio}. Esta accion no se puede deshacer. ¿Deseas continuar?`);
+    if (!confirmed) return;
+
+    setLoading(true);
+    try {
+      await dbService.addBitácora({
+        tramiteId: tramite.id,
+        usuario: user.nombre,
+        accion: 'ELIMINACION_SOLICITUD',
+        categoria: 'WORKFLOW',
+        descripcion: `Solicitud ${tramite.folio} marcada para eliminacion por ${user.nombre}.`
+      });
+      await dbService.deleteTramite(tramite.id);
+      setSelectedTramite(null);
+      await loadData();
+      setUiMessage('Solicitud eliminada correctamente.');
+    } catch (e: any) {
+      setUiMessage(e?.message || 'No se pudo eliminar la solicitud.');
     } finally {
       setLoading(false);
     }
@@ -454,7 +508,7 @@ const App: React.FC = () => {
       <div className="h-screen flex flex-col items-center justify-center bg-imss-dark text-white">
         <Loader2 className="animate-spin mb-6 text-imss-gold" size={64} />
         <h2 className="text-2xl font-black uppercase tracking-[0.3em] animate-pulse">SISTRA Cloud</h2>
-        <p className="text-imss-gold/60 mt-4 font-bold text-xs">INICIALIZANDO SESION SEGURA...</p>
+        <p className="text-imss-gold/60 mt-4 font-bold text-xs">INICIALIZANDO sesión SEGURA...</p>
       </div>
     );
   }
@@ -563,9 +617,9 @@ const App: React.FC = () => {
               <h2 className="text-base lg:text-xl font-black text-slate-800 flex items-center gap-3 uppercase tracking-tight">
                 <span className="w-1.5 h-8 bg-imss rounded-full"></span>
                 {activeTab === 'dashboard' && 'Resumen Institucional'}
-                {activeTab === 'tramites' && 'Gestion de Tramites'}
+                {activeTab === 'tramites' && 'Gestión de Tramites'}
                 {activeTab === 'nuevo' && 'Solicitud de Dotacion'}
-                {activeTab === 'central' && 'Gestion de Tramites'}
+                {activeTab === 'central' && 'Gestión de Tramites'}
               </h2>
             </div>
             
@@ -605,13 +659,13 @@ const App: React.FC = () => {
                         setUserMenuOpen(false);
                       }}
                     >
-                      <KeyRound size={16} /> Cambiar contrasena
+                      <KeyRound size={16} /> Cambiar contraseña
                     </button>
                     <button
                       className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-red-50 text-red-600 flex items-center gap-2"
                       onClick={handleLogout}
                     >
-                      <LogOut size={16} /> Cerrar sesion
+                      <LogOut size={16} /> Cerrar sesión
                     </button>
                   </div>
                 )}
@@ -647,7 +701,7 @@ const App: React.FC = () => {
             onClose={() => setShowChangePasswordModal(false)}
             onSuccess={(message) => {
               setShowChangePasswordModal(false);
-              forceLogoutWithMessage(`${message} Por seguridad inicia sesion nuevamente.`);
+              forceLogoutWithMessage(`${message} Por seguridad inicia sesión nuevamente.`);
             }}
             onAuthFailure={(message) => {
               forceLogoutWithMessage(message);
@@ -663,6 +717,7 @@ const App: React.FC = () => {
             onClose={() => setSelectedTramite(null)} 
             onUpdateEstatus={handleUpdateEstatus}
             onEditCapture={handleEditCapture}
+            onDeleteTramite={handleDeleteTramite}
             onPrint={handlePrintRequest}
             historicalDotations={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
             loading={loading}
@@ -704,7 +759,7 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         <h1 className="text-2xl font-black text-imss-dark uppercase mb-8">Acceso SISTRA</h1>
         <label className="field-label">Matricula</label>
         <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className="field-input mb-5" placeholder="Ej. 99032103" inputMode="numeric" pattern="[0-9]*" required />
-        <label className="field-label">Contrasena</label>
+        <label className="field-label">contraseña</label>
         <div className="relative mb-6">
           <input
             type={showPassword ? 'text' : 'password'}
@@ -718,8 +773,8 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
-            aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-            title={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
@@ -727,9 +782,9 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         {infoMessage && <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm font-bold mb-4">{infoMessage}</p>}
         {(localError || error) && <p className="text-red-600 text-sm font-bold mb-4">{localError || error}</p>}
         <button disabled={loading} className="w-full py-4 rounded-xl btn-institutional disabled:opacity-50">
-          {loading ? 'Ingresando...' : 'Iniciar sesion'}
+          {loading ? 'Ingresando...' : 'Iniciar sesión'}
         </button>
-        <p className="text-[11px] text-slate-500 mt-4">Acceso con Firebase Auth (matricula + contrasena).</p>
+        <p className="text-[11px] text-slate-500 mt-4">Acceso con Firebase Auth (matricula + contraseña).</p>
       </form>
     </div>
   );
@@ -767,12 +822,12 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
             ))}
           </select>
           <div className="relative">
-            <input type={showPassword ? 'text' : 'password'} className="w-full p-3 border rounded-xl pr-10" placeholder="Contrasena inicial" value={password} onChange={(e)=>setPassword(e.target.value)} />
+            <input type={showPassword ? 'text' : 'password'} className="w-full p-3 border rounded-xl pr-10" placeholder="contraseña inicial" value={password} onChange={(e)=>setPassword(e.target.value)} />
             <button
               type="button"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
               onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -804,7 +859,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
                   <input
                     type={showResetPasswordByUser[u.id] ? 'text' : 'password'}
                     className="w-full p-2 border rounded-lg pr-9"
-                    placeholder="Nueva contrasena"
+                    placeholder="Nueva contraseña"
                     value={resetPasswordByUser[u.id] || ''}
                     onChange={(e)=>setResetPasswordByUser(prev => ({ ...prev, [u.id]: e.target.value }))}
                   />
@@ -812,7 +867,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
                     type="button"
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
                     onClick={() => setShowResetPasswordByUser(prev => ({ ...prev, [u.id]: !prev[u.id] }))}
-                    aria-label={showResetPasswordByUser[u.id] ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                    aria-label={showResetPasswordByUser[u.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   >
                     {showResetPasswordByUser[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -829,7 +884,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
                     setResetPasswordByUser(prev => ({ ...prev, [u.id]: '' }));
                     setFeedback(`Correo de restablecimiento enviado para ${u.matricula}.`);
                   }
-                  catch(e:any){ setFeedback(e?.message || 'No se pudo resetear la contrasena.'); }
+                  catch(e:any){ setFeedback(e?.message || 'No se pudo resetear la contraseña.'); }
                 }}>Reset</button>
               </div>
             </div>
@@ -901,7 +956,7 @@ const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUp
     
     <div className="bg-white p-12 rounded-[50px] border border-slate-100 shadow-sm min-h-[500px] flex flex-col">
        <div className="flex items-center justify-between mb-12">
-          <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Indicadores de Gestion Nacional</h3>
+          <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Indicadores de Gestión Nacional</h3>
           <div className="flex items-center gap-3">
              <div className="w-3 h-3 bg-imss rounded-full"></div>
              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tramites Activos</span>
@@ -1005,22 +1060,22 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
   </div>
 );
 
-const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCapture, onPrint, historicalDotations, loading }: any) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'bitacora' | 'tarjeta'>('info');
-  const [bitacora, setBitacora] = useState<Bitacora[]>([]);
-  // control de importe se gestiona fuera de la unidad
+const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCapture, onDeleteTramite, onPrint, historicalDotations, loading }: any) => {
+  const [activeTab, setActiveTab] = useState<'info' | 'Bitácora' | 'tarjeta'>('info');
+  const [Bitácora, setBitácora] = useState<Bitácora[]>([]);
+  // control de importe se Gestióna fuera de la unidad
 
   useEffect(() => {
     let isMounted = true;
-    const fetchBitacora = async () => {
+    const fetchBitácora = async () => {
       try {
-        const data = await dbService.getBitacora(tramite.id);
-        if (isMounted) setBitacora(data);
+        const data = await dbService.getBitácora(tramite.id);
+        if (isMounted) setBitácora(data);
       } catch (e) {
-        if (isMounted) setBitacora([]);
+        if (isMounted) setBitácora([]);
       }
     };
-    fetchBitacora();
+    fetchBitácora();
     return () => { isMounted = false; };
   }, [tramite.id]);
 
@@ -1057,6 +1112,9 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                <button onClick={() => onEditCapture(tramite)} className="px-6 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all text-xs font-black uppercase tracking-widest border border-white/5">
                  Editar captura
                </button>
+               <button onClick={() => onDeleteTramite(tramite)} className="px-6 py-4 bg-red-500/20 hover:bg-red-500/35 rounded-2xl transition-all text-xs font-black uppercase tracking-widest border border-red-200/30 text-red-100">
+                 Eliminar solicitud
+               </button>
                <button onClick={onClose} className="p-4 bg-white/5 hover:bg-white/20 rounded-2xl text-white/40 hover:text-white transition-all">
                  <XCircle size={32} />
                </button>
@@ -1064,9 +1122,9 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
           </div>
 
           <div className="mobile-scroll-x flex border-b border-slate-100 bg-slate-50 px-2 lg:px-12">
-             <TabButton label="Informacion General" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
+             <TabButton label="Información General" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
              <TabButton label="Historial Institucional" active={activeTab === 'tarjeta'} onClick={() => setActiveTab('tarjeta')} />
-             <TabButton label="Bitacora Cloud" active={activeTab === 'bitacora'} onClick={() => setActiveTab('bitacora')} />
+             <TabButton label="Bitácora Cloud" active={activeTab === 'Bitácora'} onClick={() => setActiveTab('Bitácora')} />
           </div>
 
           <div className="flex-1 overflow-auto p-4 lg:p-12 bg-white">
@@ -1086,29 +1144,25 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                   </div>
                 </div>
                 <div className="space-y-10">
-                   <div className="p-10 bg-imss-light/30 rounded-[40px] border border-imss/10 space-y-6">
-                    <h4 className="text-[11px] font-black text-imss/50 uppercase tracking-[0.2em]">Validacion documental en unidad</h4>
-                    <div className="bg-white rounded-2xl p-5 border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Documentos requeridos al usuario</p>
-                      <ul className="text-xs font-semibold text-slate-700 space-y-2">
-                        <li>• Receta de lentes IMSS vigente.</li>
-                        <li>• Identificacion oficial de titular/solicitante.</li>
-                        <li>• Si es hija/hijo: acta y constancia de estudios cuando aplique.</li>
-                        <li>• Datos completos para formato 027 y tarjeta 028.</li>
-                      </ul>
+                  <div className="p-10 bg-imss-light/30 rounded-[40px] border border-imss/10 space-y-6">
+                    <h4 className="text-[11px] font-black text-imss/50 uppercase tracking-[0.2em]">Control normativo</h4>
+                    <div className="bg-white rounded-2xl p-5 border border-slate-100 space-y-3">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contrato colectivo aplicable</p>
+                      <p className="text-sm font-black text-slate-800">{tramite.contratoColectivoAplicable || 'SIN CAPTURA'}</p>
+                      <p className="text-[10px] text-slate-500 font-bold">Dotaciones registradas para este contrato: {historicalDotations.filter((d: Tramite) => String(d.contratoColectivoAplicable || '').trim().toUpperCase() === String(tramite.contratoColectivoAplicable || '').trim().toUpperCase()).length} de 2</p>
                     </div>
-                    <div className="flex items-center gap-4 text-amber-700 bg-amber-50 p-6 rounded-2xl border border-amber-200">
-                      <AlertTriangle size={20} />
-                      <p className="text-[10px] font-black uppercase tracking-widest">La unidad solo captura solicitudes e imprime/reimprime formatos. El control de importe se realiza fuera de esta pantalla.</p>
+                    <div className="bg-white rounded-2xl p-5 border border-slate-100 space-y-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Medicion de anteojos</p>
+                      <p className="text-sm font-bold text-slate-800">{tramite.medicionAnteojos?.trim() ? tramite.medicionAnteojos : 'Sin medicion capturada. Se permite impresion para llenado manual.'}</p>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'bitacora' && (
+            {activeTab === 'Bitácora' && (
               <div className="space-y-6">
-                 {bitacora.length > 0 ? bitacora.map((b) => (
+                 {Bitácora.length > 0 ? Bitácora.map((b) => (
                    <div key={b.id} className="p-6 bg-slate-50 border-l-[6px] border-imss rounded-3xl shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-4">
                         <p className="font-black text-imss-dark text-sm uppercase">{b.accion}</p>
@@ -1130,7 +1184,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                    </div>
                  )) : (
                    <div className="text-center py-32 bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-100">
-                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] opacity-40">Bitacora en blanco</p>
+                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] opacity-40">Bitácora en blanco</p>
                    </div>
                  )}
               </div>
@@ -1188,36 +1242,36 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
     setFeedback(null);
 
     if (!currentPassword.trim()) {
-      setFeedback('Captura tu contrasena actual para continuar.');
+      setFeedback('Captura tu contraseña actual para continuar.');
       return;
     }
 
     if (strengthIssues.length > 0) {
-      setFeedback(`La nueva contrasena no cumple la politica: ${strengthIssues.join(' ')}`);
+      setFeedback(`La nueva contraseña no cumple la politica: ${strengthIssues.join(' ')}`);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setFeedback('La confirmacion no coincide con la nueva contrasena.');
+      setFeedback('La confirmacion no coincide con la nueva contraseña.');
       return;
     }
 
     if (currentPassword === newPassword) {
-      setFeedback('La nueva contrasena debe ser diferente a la actual.');
+      setFeedback('La nueva contraseña debe ser diferente a la actual.');
       return;
     }
 
     setSubmitting(true);
     try {
       await changeOwnPassword(currentPassword, newPassword);
-      onSuccess('Contrasena actualizada correctamente. Usa la nueva contrasena en tu proximo inicio de sesion.');
+      onSuccess('contraseña actualizada correctamente. Usa la nueva contraseña en tu proximo inicio de sesión.');
     } catch (error: any) {
       if (error instanceof AuthError && (error.code === 'INVALID_CREDENTIALS' || error.code === 'INVALID_SESSION')) {
-        onAuthFailure('No fue posible reautenticar tu identidad. Por seguridad se cerro tu sesion. Inicia de nuevo.');
+        onAuthFailure('No fue posible reautenticar tu identidad. Por seguridad se cerro tu sesión. Inicia de nuevo.');
         return;
       }
 
-      setFeedback(error?.message || 'No se pudo cambiar la contrasena. Intenta de nuevo.');
+      setFeedback(error?.message || 'No se pudo cambiar la contraseña. Intenta de nuevo.');
     } finally {
       setSubmitting(false);
     }
@@ -1227,24 +1281,24 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
     <div className="fixed inset-0 z-40 bg-slate-900/40 flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Cambiar contrasena</h3>
+          <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Cambiar contraseña</h3>
           <button className="text-xs font-bold uppercase text-slate-500 hover:text-slate-800" onClick={onClose} disabled={submitting}>Cerrar</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="field-label">Contrasena actual</label>
+            <label className="field-label">contraseña actual</label>
             <div className="relative">
               <input type={showCurrentPassword ? 'text' : 'password'} className="field-input pr-12" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowCurrentPassword((prev) => !prev)} aria-label={showCurrentPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}>
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowCurrentPassword((prev) => !prev)} aria-label={showCurrentPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                 {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
           <div>
-            <label className="field-label">Nueva contrasena</label>
+            <label className="field-label">Nueva contraseña</label>
             <div className="relative">
               <input type={showNewPassword ? 'text' : 'password'} className="field-input pr-12" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowNewPassword((prev) => !prev)} aria-label={showNewPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}>
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowNewPassword((prev) => !prev)} aria-label={showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                 {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -1263,10 +1317,10 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
             </ul>
           </div>
           <div>
-            <label className="field-label">Confirmar nueva contrasena</label>
+            <label className="field-label">Confirmar nueva contraseña</label>
             <div className="relative">
               <input type={showConfirmPassword ? 'text' : 'password'} className="field-input pr-12" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowConfirmPassword((prev) => !prev)} aria-label={showConfirmPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}>
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowConfirmPassword((prev) => !prev)} aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -1277,7 +1331,7 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
           <div className="pt-2 flex items-center justify-end gap-3">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" disabled={submitting}>Cancelar</button>
             <button type="submit" className="px-5 py-2 rounded-xl bg-imss text-white text-sm font-black disabled:opacity-50" disabled={submitting}>
-              {submitting ? 'Actualizando...' : 'Guardar contrasena'}
+              {submitting ? 'Actualizando...' : 'Guardar contraseña'}
             </button>
           </div>
         </form>
@@ -1311,7 +1365,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     entidadLaboral: user.unidad,
     ooad: user.ooad
   });
-  const [receta, setReceta] = useState({ folio: '', descripcion: '', dotacionNo: 1 });
+  const [receta, setReceta] = useState({ folio: '', descripcion: '', medicionAnteojos: '', contratoColectivoAplicable: '', dotacionNo: 1 });
 
   const edadBeneficiario = useMemo(() => {
     if (!beneficiario.fechaNacimiento) return null;
@@ -1361,10 +1415,13 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
   };
 
   const validateStep2 = () => {
-    return validateNuevoTramiteStep2({
+    const step2Error = validateNuevoTramiteStep2({
       folioRecetaImss: receta.folio,
       descripcionLente: receta.descripcion
     });
+    if (step2Error) return step2Error;
+    if (!receta.contratoColectivoAplicable?.trim()) return 'Captura el contrato colectivo aplicable.';
+    return '';
   };
 
   const goToStep = (targetStep: number) => {
@@ -1398,6 +1455,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
         constanciaEstudiosVigente: Boolean(beneficiario.constanciaEstudiosVigente),
         requiereConstanciaEstudios
       },
+      contratoColectivoAplicable: receta.contratoColectivoAplicable.trim(),
       fechaCreacion: new Date().toISOString(),
       creadorId: user.id,
       unidad: user.unidad,
@@ -1408,6 +1466,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       folioRecetaImss: receta.folio,
       fechaExpedicionReceta: new Date().toISOString(),
       descripcionLente: receta.descripcion,
+      medicionAnteojos: receta.medicionAnteojos.trim(),
       clavePresupuestal: '1A14-009-027',
       checklist: {} as any,
       evidencias: [],
@@ -1523,6 +1582,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
                     <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
+                    <p className="mt-2 text-[11px] font-bold text-amber-700">Aviso OOAD: el contrato colectivo solo aplica a personal adscrito al OOAD capturado al momento del registro.</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Tipo de contratacion</label>
@@ -1567,8 +1627,16 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Diagnostico y Especificacion</label>
               <textarea placeholder="DESCRIBA LA GRADUACION..." aria-label="Diagnostico y especificacion" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => { setStepError(''); setReceta({ ...receta, descripcion: e.target.value }); }} />
             </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Contrato colectivo aplicable (obligatorio)</label>
+              <input placeholder="Ej. CCT-IMSS/2026-P1" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.contratoColectivoAplicable} onChange={(e) => { setStepError(''); setReceta({ ...receta, contratoColectivoAplicable: e.target.value }); }} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Medicion de anteojos (opcional)</label>
+              <input placeholder="Puede dejarse vacio para llenado manual" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-bold text-slate-800 shadow-inner" value={receta.medicionAnteojos} onChange={(e) => { setStepError(''); setReceta({ ...receta, medicionAnteojos: e.target.value }); }} />
+            </div>
             <div className="flex gap-6">
-              <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atras</button>
+              <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
               <button onClick={() => goToStep(3)} className="flex-1 py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>
             </div>
           </div>
@@ -1579,7 +1647,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               <ShieldCheck className="text-imss" size={56} />
             </div>
             <h3 className="text-4xl font-black text-slate-800 uppercase mb-6 tracking-tighter">Validacion de Registro</h3>
-            <p className="text-slate-500 mb-14 max-w-md mx-auto font-medium leading-relaxed uppercase text-xs tracking-widest">La solicitud sera firmada digitalmente y sincronizada con el servidor central de prestaciones.</p>
+            <p className="text-slate-500 mb-14 max-w-md mx-auto font-medium leading-relaxed uppercase text-xs tracking-widest">La solicitud sera firmada digitalmente y registrada en el sistema institucional.</p>
             <div className="flex gap-6">
               <button onClick={() => goToStep(2)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
               <button onClick={handleFinalize} className="flex-1 py-7 bg-imss-dark text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition-all">Sincronizar Solicitud</button>
@@ -1595,7 +1663,7 @@ const CentralView = ({ tramites }: any) => (
      <div className="bg-imss-dark p-16 rounded-[60px] shadow-2xl flex justify-between items-center border-b-8 border-imss-gold/30">
         <div>
            <h3 className="text-4xl font-black text-white uppercase tracking-tighter">Consolidado Nacional</h3>
-           <p className="text-imss-gold font-black text-xs uppercase tracking-[0.4em] mt-3">Gestion de Auditoria y Control Fiscal</p>
+           <p className="text-imss-gold font-black text-xs uppercase tracking-[0.4em] mt-3">Gestión de Auditoria y Control Fiscal</p>
         </div>
         <div className="bg-white/10 px-8 py-5 rounded-[24px] backdrop-blur-md border border-white/5">
            <p className="text-white font-black text-lg">{tramites.length} REGISTROS</p>
@@ -1606,6 +1674,7 @@ const CentralView = ({ tramites }: any) => (
 );
 
 export default App;
+
 
 
 

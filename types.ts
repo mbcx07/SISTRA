@@ -70,6 +70,7 @@ export interface Tramite {
   id: string;
   folio: string; // OOAD-UNIDAD-AÑO-CONSECUTIVO
   beneficiario: Beneficiario;
+  contratoColectivoAplicable: string;
   fechaCreacion: string;
   creadorId: string;
   unidad: string;
@@ -89,6 +90,7 @@ export interface Tramite {
   fechaExpedicionReceta: string;
   descripcionLente: string;
   dioptrias?: string;
+  medicionAnteojos?: string;
   clavePresupuestal: string;
   qnaInclusion?: string; // Formato 2026/003
   

@@ -11,7 +11,8 @@ import {
   query,
   where,
   orderBy,
-  limit
+  limit,
+  deleteDoc
 } from "firebase/firestore";
 import {
   getAuth,
@@ -252,6 +253,14 @@ const addWorkflowBitacora = async (payload: {
   });
 };
 
+const canAccessTramiteByScope = (user: User, tramite: Tramite): boolean => {
+  if (user.role === Role.ADMIN_SISTEMA) return true;
+  if (user.role === Role.CAPTURISTA_UNIDAD) {
+    return (tramite.unidad || '').trim().toUpperCase() === (user.unidad || '').trim().toUpperCase();
+  }
+  return true;
+};
+
 export const ensureSession = async (): Promise<User | null> => {
   if (currentUserProfile) return currentUserProfile;
 
@@ -474,7 +483,7 @@ export const dbService = {
       if (user.role === Role.CAPTURISTA_UNIDAD) {
         q = query(
           collection(db, "tramites"),
-          where("beneficiario.entidadLaboral", "==", user.unidad),
+          where("unidad", "==", user.unidad),
           orderBy("fechaCreacion", "desc"),
           limit(100)
         );
@@ -513,6 +522,10 @@ export const dbService = {
 
         const previo = prevSnapshot.data() as Tramite;
 
+        if (!canAccessTramiteByScope(user, previo)) {
+          throw new Error('No tienes permisos para editar tramites de otra unidad.');
+        }
+
         if (tramite.estatus) {
           if (!canUpdateStatus(user.role, tramite.estatus)) {
             const reason = tramite.estatus === EstatusWorkflow.AUTORIZADO
@@ -550,6 +563,28 @@ export const dbService = {
           }
         }
 
+        if (typeof tramite.contratoColectivoAplicable === 'string') {
+          const contrato = tramite.contratoColectivoAplicable.trim();
+          if (!contrato) {
+            throw new Error('El campo contratoColectivoAplicable es obligatorio.');
+          }
+          const nssTitular = String((tramite.beneficiario?.nssTrabajador || previo.beneficiario?.nssTrabajador || '')).trim();
+          const historialQ = query(
+            collection(db, "tramites"),
+            where("beneficiario.nssTrabajador", "==", nssTitular),
+            orderBy("fechaCreacion", "desc"),
+            limit(200)
+          );
+          const historialSnap = await getDocs(historialQ);
+          const historialMismoContrato = historialSnap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Tramite) }))
+            .filter((t) => t.id !== tramite.id)
+            .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase());
+          if (historialMismoContrato.length >= 2) {
+            throw new Error(`No se puede guardar. El titular ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
+          }
+        }
+
         const { id, ...data } = tramite;
         await updateDoc(docRef, data);
 
@@ -584,8 +619,30 @@ export const dbService = {
           throw new Error(createIssues[0]);
         }
 
+        const contrato = String(tramite.contratoColectivoAplicable || '').trim();
+        if (!contrato) {
+          throw new Error('El campo contratoColectivoAplicable es obligatorio.');
+        }
+
+        const nssTitular = String(tramite.beneficiario?.nssTrabajador || '').trim();
+        const historialQ = query(
+          collection(db, "tramites"),
+          where("beneficiario.nssTrabajador", "==", nssTitular),
+          orderBy("fechaCreacion", "desc"),
+          limit(200)
+        );
+        const historialSnap = await getDocs(historialQ);
+        const historialMismoContrato = historialSnap.docs
+          .map((d) => d.data() as Tramite)
+          .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase());
+
+        if (historialMismoContrato.length >= 2) {
+          throw new Error(`No se puede registrar una nueva solicitud. El titular ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
+        }
+
         const docRef = await addDoc(collection(db, "tramites"), {
           ...tramite,
+          contratoColectivoAplicable: contrato,
           creadorId: user.id,
           unidad: user.unidad
         });
@@ -595,6 +652,22 @@ export const dbService = {
       console.error("DB Error (saveTramite):", error);
       throw error;
     }
+  },
+
+  async deleteTramite(tramiteId: string): Promise<void> {
+    const user = await ensureSession();
+    if (!user) throw new AuthError('INVALID_SESSION', 'Sesion invalida. Inicia sesion nuevamente.');
+
+    const docRef = doc(db, "tramites", tramiteId);
+    const snapshot = await getDoc(docRef);
+    if (!snapshot.exists()) throw new Error('El tramite no existe o ya fue eliminado.');
+
+    const previo = snapshot.data() as Tramite;
+    if (!canAccessTramiteByScope(user, previo)) {
+      throw new Error('No tienes permisos para eliminar tramites de otra unidad.');
+    }
+
+    await deleteDoc(docRef);
   },
 
   async getBitacora(tramiteId: string): Promise<Bitacora[]> {
