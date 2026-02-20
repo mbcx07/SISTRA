@@ -21,6 +21,7 @@ import {
   createUserWithEmailAndPassword,
   setPersistence,
   inMemoryPersistence,
+  browserSessionPersistence,
   sendPasswordResetEmail,
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -42,6 +43,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const authPersistenceReady = setPersistence(auth, browserSessionPersistence).catch((error) => {
+  console.warn('No se pudo establecer persistencia de sesión en navegador.', error);
+});
 
 const AUTH_EMAIL_DOMAIN = (import.meta as any).env?.VITE_AUTH_EMAIL_DOMAIN || 'sistra.local';
 
@@ -81,6 +85,7 @@ const getCreatorAuth = async () => {
 };
 
 const waitForAuthState = async () => {
+  await authPersistenceReady;
   if (auth.currentUser) return auth.currentUser;
 
   return await new Promise<any>((resolve) => {
@@ -111,7 +116,7 @@ const bootstrapPrimaryAdminProfile = async (uid: string, matricula: string, emai
 export type AppTab = 'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers';
 
 export const TABS_BY_ROLE: Record<Role, AppTab[]> = {
-  [Role.ADMIN_SISTEMA]: ['dashboard', 'tramites', 'central', 'adminUsers'],
+  [Role.ADMIN_SISTEMA]: ['dashboard', 'tramites', 'nuevo', 'central', 'adminUsers'],
   [Role.CAPTURISTA_UNIDAD]: ['dashboard', 'tramites', 'nuevo'],
   [Role.CONSULTA_CENTRAL]: ['dashboard', 'tramites', 'central'],
   [Role.VALIDADOR_PRESTACIONES]: ['dashboard', 'tramites'],
@@ -286,6 +291,7 @@ export const loginWithMatricula = async (matricula: string, password: string): P
   }
 
   try {
+    await authPersistenceReady;
     const candidates = matriculaToEmailCandidates(matriculaNormalized);
 
     let lastAuthError: any = null;

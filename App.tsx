@@ -575,8 +575,8 @@ const App: React.FC = () => {
           <ChangePasswordModal
             onClose={() => setShowChangePasswordModal(false)}
             onSuccess={(message) => {
-              setUiMessage(message);
               setShowChangePasswordModal(false);
+              forceLogoutWithMessage(`${message} Por seguridad inicia sesión nuevamente.`);
             }}
             onAuthFailure={(message) => {
               forceLogoutWithMessage(message);
@@ -669,7 +669,10 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
   const [matricula, setMatricula] = useState('');
   const [unidad, setUnidad] = useState('');
   const [ooad, setOoad] = useState('');
+  const [role, setRole] = useState<Role>(Role.CAPTURISTA_UNIDAD);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showResetPasswordByUser, setShowResetPasswordByUser] = useState<Record<string, boolean>>({});
   const [resetPasswordByUser, setResetPasswordByUser] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -683,10 +686,25 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
         {feedback && <p className="mb-3 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg px-3 py-2">{feedback}</p>}
         <div className="space-y-3">
           <input className="w-full p-3 border rounded-xl" placeholder="Nombre" value={nombre} onChange={(e)=>setNombre(e.target.value)} />
-          <input className="w-full p-3 border rounded-xl" placeholder="Matrícula" value={matricula} onChange={(e)=>setMatricula(e.target.value)} />
+          <input className="w-full p-3 border rounded-xl" placeholder="Matrícula" inputMode="numeric" pattern="[0-9]*" value={matricula} onChange={(e)=>setMatricula(e.target.value.replace(/\D/g, ''))} />
           <input className="w-full p-3 border rounded-xl" placeholder="Unidad" value={unidad} onChange={(e)=>setUnidad(e.target.value)} />
           <input className="w-full p-3 border rounded-xl" placeholder="OOAD" value={ooad} onChange={(e)=>setOoad(e.target.value)} />
-          <input type="password" className="w-full p-3 border rounded-xl" placeholder="Contraseña inicial" value={password} onChange={(e)=>setPassword(e.target.value)} />
+          <select className="w-full p-3 border rounded-xl bg-white" value={role} onChange={(e)=>setRole(e.target.value as Role)}>
+            {Object.values(Role).map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+          <div className="relative">
+            <input type={showPassword ? 'text' : 'password'} className="w-full p-3 border rounded-xl pr-10" placeholder="Contraseña inicial" value={password} onChange={(e)=>setPassword(e.target.value)} />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
           <button className="w-full py-3 bg-imss text-white rounded-xl font-black uppercase" onClick={async ()=>{
             const issues = validatePasswordStrength(password);
             if (issues.length > 0) {
@@ -694,12 +712,12 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
               return;
             }
             try {
-              await adminCreateCapturista(currentUser, { nombre, matricula, unidad, ooad, password, role: Role.CAPTURISTA_UNIDAD });
-              setNombre('');setMatricula('');setUnidad('');setOoad('');setPassword('');
+              await adminCreateCapturista(currentUser, { nombre, matricula, unidad, ooad, password, role });
+              setNombre('');setMatricula('');setUnidad('');setOoad('');setPassword('');setRole(Role.CAPTURISTA_UNIDAD);
               await refresh();
-              setFeedback('Capturista creado correctamente.');
-            } catch (e: any) { setFeedback(e?.message || 'No se pudo crear el capturista.'); }
-          }}>Crear capturista</button>
+              setFeedback('Usuario creado correctamente.');
+            } catch (e: any) { setFeedback(e?.message || 'No se pudo crear el usuario.'); }
+          }}>Crear usuario</button>
         </div>
       </div>
       <div className="bg-white rounded-3xl p-8 border border-slate-100">
@@ -710,13 +728,23 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
               <p className="font-black text-sm">{u.nombre} · {u.matricula}</p>
               <p className="text-xs text-slate-500">{u.role} · {u.unidad} · {u.activo ? 'ACTIVO' : 'INACTIVO'}</p>
               <div className="mt-2 flex gap-2">
-                <input
-                  type="password"
-                  className="flex-1 p-2 border rounded-lg"
-                  placeholder="Nueva contraseña"
-                  value={resetPasswordByUser[u.id] || ''}
-                  onChange={(e)=>setResetPasswordByUser(prev => ({ ...prev, [u.id]: e.target.value }))}
-                />
+                <div className="relative flex-1">
+                  <input
+                    type={showResetPasswordByUser[u.id] ? 'text' : 'password'}
+                    className="w-full p-2 border rounded-lg pr-9"
+                    placeholder="Nueva contraseña"
+                    value={resetPasswordByUser[u.id] || ''}
+                    onChange={(e)=>setResetPasswordByUser(prev => ({ ...prev, [u.id]: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
+                    onClick={() => setShowResetPasswordByUser(prev => ({ ...prev, [u.id]: !prev[u.id] }))}
+                    aria-label={showResetPasswordByUser[u.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showResetPasswordByUser[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
                 <button className="px-3 bg-slate-800 text-white rounded-lg text-xs" onClick={async ()=>{
                   const candidate = (resetPasswordByUser[u.id] || '').trim();
                   const issues = validatePasswordStrength(candidate);
@@ -1072,6 +1100,9 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -1127,11 +1158,21 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="field-label">Contraseña actual</label>
-            <input type="password" className="field-input" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+            <div className="relative">
+              <input type={showCurrentPassword ? 'text' : 'password'} className="field-input pr-12" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowCurrentPassword((prev) => !prev)} aria-label={showCurrentPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="field-label">Nueva contraseña</label>
-            <input type="password" className="field-input" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            <div className="relative">
+              <input type={showNewPassword ? 'text' : 'password'} className="field-input pr-12" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowNewPassword((prev) => !prev)} aria-label={showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             <ul className="mt-2 space-y-1 text-[11px]">
               {[
                 { ok: newPassword.length >= 10, text: 'Mínimo 10 caracteres' },
@@ -1148,7 +1189,12 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
           </div>
           <div>
             <label className="field-label">Confirmar nueva contraseña</label>
-            <input type="password" className="field-input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+            <div className="relative">
+              <input type={showConfirmPassword ? 'text' : 'password'} className="field-input pr-12" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowConfirmPassword((prev) => !prev)} aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           {feedback && <p className="text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{feedback}</p>}
