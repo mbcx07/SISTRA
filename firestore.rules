@@ -88,11 +88,20 @@ service cloud.firestore {
 
     // Usuarios
     match /usuarios/{userId} {
-      // Admin ve/gestiona todos; cada usuario ve su propio perfil
-      allow read: if activeUser() && (isAdmin() || request.auth.uid == userId);
+      // Admin ve/gestiona todos; cada usuario ve su propio perfil (aunque aún no esté activo)
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
 
-      // Alta/baja/edición de usuarios solo por admin
-      allow create, update, delete: if activeUser() && isAdmin();
+      // Bootstrap inicial del administrador principal por matrícula
+      allow create: if (
+        signedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.matricula == '99032103' &&
+        request.resource.data.role == 'ADMIN_SISTEMA' &&
+        request.resource.data.activo == true
+      ) || (activeUser() && isAdmin());
+
+      // Edición/baja de usuarios solo por admin activo
+      allow update, delete: if activeUser() && isAdmin();
     }
 
     // Trámites

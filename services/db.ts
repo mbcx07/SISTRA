@@ -49,6 +49,7 @@ let currentUserProfile: User | null = null;
 let creatorAuthPromise: Promise<ReturnType<typeof getAuth>> | null = null;
 
 const normalizeMatricula = (matricula: string) => matricula.trim().toUpperCase();
+const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
   '99032103': 'moises.beltran@imss.gob.mx',
 };
@@ -88,6 +89,23 @@ const waitForAuthState = async () => {
       resolve(firebaseUser);
     });
   });
+};
+
+const bootstrapPrimaryAdminProfile = async (uid: string, matricula: string, email: string) => {
+  if (normalizeMatricula(matricula) !== PRIMARY_ADMIN_MATRICULA) return;
+
+  const bootstrapUser: User = {
+    id: uid,
+    nombre: 'Moisés Beltrán Castro',
+    matricula: PRIMARY_ADMIN_MATRICULA,
+    role: Role.ADMIN_SISTEMA,
+    unidad: 'CENTRAL',
+    ooad: 'BCS',
+    activo: true,
+    authEmail: email
+  };
+
+  await setDoc(doc(db, 'usuarios', uid), bootstrapUser, { merge: true });
 };
 
 export type AppTab = 'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers';
@@ -275,7 +293,25 @@ export const loginWithMatricula = async (matricula: string, password: string): P
       try {
         const cred = await signInWithEmailAndPassword(auth, email, password);
 
-        const userDoc = await getDoc(doc(db, 'usuarios', cred.user.uid));
+        let userDoc;
+        try {
+          userDoc = await getDoc(doc(db, 'usuarios', cred.user.uid));
+        } catch (readError: any) {
+          if (String(readError?.code || '') === 'permission-denied' && matriculaNormalized === PRIMARY_ADMIN_MATRICULA) {
+            await bootstrapPrimaryAdminProfile(cred.user.uid, matriculaNormalized, email);
+            userDoc = await getDoc(doc(db, 'usuarios', cred.user.uid));
+          } else {
+            throw readError;
+          }
+        }
+
+        if (!userDoc.exists()) {
+          if (matriculaNormalized === PRIMARY_ADMIN_MATRICULA) {
+            await bootstrapPrimaryAdminProfile(cred.user.uid, matriculaNormalized, email);
+            userDoc = await getDoc(doc(db, 'usuarios', cred.user.uid));
+          }
+        }
+
         if (!userDoc.exists()) {
           await signOut(auth);
           throw new AuthError('INVALID_SESSION', 'Tu cuenta no está mapeada en usuarios/{uid}.');

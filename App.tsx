@@ -631,7 +631,7 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
       >
         <h1 className="text-2xl font-black text-imss-dark uppercase mb-8">Acceso SISTRA</h1>
         <label className="field-label">Matrícula</label>
-        <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className="field-input mb-5 uppercase" placeholder="Ej. CAP001" required />
+        <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className="field-input mb-5" placeholder="Ej. 99032103" inputMode="numeric" pattern="[0-9]*" required />
         <label className="field-label">Contraseña</label>
         <div className="relative mb-6">
           <input
