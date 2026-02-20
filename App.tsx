@@ -420,25 +420,43 @@ const App: React.FC = () => {
     if (apellidoMaterno === null) return;
     const nss = window.prompt('NSS titular:', tramite.beneficiario?.nssTrabajador || '');
     if (nss === null) return;
+    const nssHijo = window.prompt('NSS hija/hijo:', tramite.beneficiario?.nssHijo || '');
+    if (nssHijo === null) return;
+    const titularNombreCompleto = window.prompt('Nombre completo de persona titular:', tramite.beneficiario?.titularNombreCompleto || '');
+    if (titularNombreCompleto === null) return;
+    const fechaNacimiento = window.prompt('Fecha de nacimiento (YYYY-MM-DD):', tramite.beneficiario?.fechaNacimiento ? String(tramite.beneficiario.fechaNacimiento).slice(0, 10) : '');
+    if (fechaNacimiento === null) return;
     const entidadLaboral = window.prompt('Unidad/adscripcion laboral:', tramite.beneficiario?.entidadLaboral || '');
     if (entidadLaboral === null) return;
+    const ooad = window.prompt('OOAD:', tramite.beneficiario?.ooad || '');
+    if (ooad === null) return;
     const matricula = window.prompt('Matricula:', tramite.beneficiario?.matricula || '');
     if (matricula === null) return;
     const claveAdscripcion = window.prompt('Clave adscripcion:', tramite.beneficiario?.claveAdscripcion || '');
     if (claveAdscripcion === null) return;
     const tipoContratacion = window.prompt('Tipo de contratacion:', tramite.beneficiario?.tipoContratacion || '');
     if (tipoContratacion === null) return;
+    const constanciaEstudiosVigente = window.prompt('Constancia de estudios vigente (SI/NO):', tramite.beneficiario?.constanciaEstudiosVigente ? 'SI' : 'NO');
+    if (constanciaEstudiosVigente === null) return;
+    const fechaConstanciaEstudios = window.prompt('Fecha constancia (YYYY-MM-DD):', tramite.beneficiario?.fechaConstanciaEstudios ? String(tramite.beneficiario.fechaConstanciaEstudios).slice(0, 10) : '');
+    if (fechaConstanciaEstudios === null) return;
     const contratoColectivoAplicable = window.prompt('Contrato colectivo aplicable (obligatorio):', tramite.contratoColectivoAplicable || '');
     if (contratoColectivoAplicable === null) return;
 
     const folioReceta = window.prompt('Folio de receta:', tramite.folioRecetaImss || '');
     if (folioReceta === null) return;
+    const fechaExpedicionReceta = window.prompt('Fecha expedicion receta (YYYY-MM-DD):', tramite.fechaExpedicionReceta ? String(tramite.fechaExpedicionReceta).slice(0, 10) : '');
+    if (fechaExpedicionReceta === null) return;
     const descripcion = window.prompt('Diagnostico/descripcion de lente:', tramite.descripcionLente || '');
     if (descripcion === null) return;
-    const medicionAnteojos = window.prompt('Medicion de anteojos (opcional, dejar vacio si no aplica):', tramite.medicionAnteojos || '');
+    const medicionAnteojos = window.prompt('Medicion de anteojos:', tramite.medicionAnteojos || '');
     if (medicionAnteojos === null) return;
     const qnaInclusion = window.prompt('Qna/Periodo de inclusion:', tramite.qnaInclusion || '');
     if (qnaInclusion === null) return;
+    const fechaRecepcionOptica = window.prompt('Fecha recepcion optica (YYYY-MM-DD):', tramite.fechaRecepcionOptica ? String(tramite.fechaRecepcionOptica).slice(0, 10) : '');
+    if (fechaRecepcionOptica === null) return;
+    const fechaEntregaOptica = window.prompt('Fecha entrega optica (YYYY-MM-DD):', tramite.fechaEntregaOptica ? String(tramite.fechaEntregaOptica).slice(0, 10) : '');
+    if (fechaEntregaOptica === null) return;
 
     setLoading(true);
     try {
@@ -451,15 +469,24 @@ const App: React.FC = () => {
           apellidoPaterno: apellidoPaterno.trim(),
           apellidoMaterno: apellidoMaterno.trim(),
           nssTrabajador: String(nss).replace(/\D/g, '').slice(0, 11),
+          nssHijo: String(nssHijo).replace(/\D/g, '').slice(0, 11),
+          titularNombreCompleto: titularNombreCompleto.trim(),
+          fechaNacimiento: fechaNacimiento.trim(),
           entidadLaboral: entidadLaboral.trim(),
+          ooad: ooad.trim(),
           matricula: matricula.trim(),
           claveAdscripcion: claveAdscripcion.trim(),
-          tipoContratacion: tipoContratacion.trim()
+          tipoContratacion: tipoContratacion.trim(),
+          constanciaEstudiosVigente: String(constanciaEstudiosVigente).trim().toUpperCase() === 'SI',
+          fechaConstanciaEstudios: fechaConstanciaEstudios.trim()
         },
         folioRecetaImss: folioReceta.trim(),
+        fechaExpedicionReceta: fechaExpedicionReceta.trim() ? new Date(fechaExpedicionReceta.trim()).toISOString() : '',
         descripcionLente: descripcion.trim(),
         medicionAnteojos: (medicionAnteojos || '').trim(),
-        qnaInclusion: qnaInclusion.trim()
+        qnaInclusion: qnaInclusion.trim(),
+        fechaRecepcionOptica: fechaRecepcionOptica.trim() ? new Date(fechaRecepcionOptica.trim()).toISOString() : '',
+        fechaEntregaOptica: fechaEntregaOptica.trim() ? new Date(fechaEntregaOptica.trim()).toISOString() : ''
       } as Partial<Tramite>);
       await dbService.addBitácora({
         tramiteId: tramite.id,
@@ -549,12 +576,11 @@ const App: React.FC = () => {
         </div>
         <div className="print-stage print-container py-4 bg-slate-100 min-h-screen">
            {printConfig.type === 'formato' ? (
-             <PDFFormatoView tramite={selectedTramite} metadata={printConfig.metadata} />
+             <PDFFormatoView tramite={selectedTramite} />
            ) : (
              <PDFTarjetaControlView 
                beneficiario={selectedTramite.beneficiario}
                dotaciones={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
-               metadata={printConfig.metadata}
              />
            )}
         </div>
@@ -1365,7 +1391,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     entidadLaboral: user.unidad,
     ooad: user.ooad
   });
-  const [receta, setReceta] = useState({ folio: '', descripcion: '', medicionAnteojos: '', contratoColectivoAplicable: '', dotacionNo: 1 });
+  const [receta, setReceta] = useState({ folio: '', descripcion: '', medicionAnteojos: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', dotacionNo: 1 });
 
   const edadBeneficiario = useMemo(() => {
     if (!beneficiario.fechaNacimiento) return null;
@@ -1421,6 +1447,8 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     });
     if (step2Error) return step2Error;
     if (!receta.contratoColectivoAplicable?.trim()) return 'Captura el contrato colectivo aplicable.';
+    if (!receta.qnaInclusion?.trim()) return 'Captura la Qna/Mes de inclusion.';
+    if (!receta.fechaExpedicionReceta) return 'Captura la fecha de expedicion de receta.';
     return '';
   };
 
@@ -1464,9 +1492,10 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       requiereDictamenMedico: receta.dotacionNo >= 3,
       importeSolicitado: 0,
       folioRecetaImss: receta.folio,
-      fechaExpedicionReceta: new Date().toISOString(),
+      fechaExpedicionReceta: new Date(receta.fechaExpedicionReceta).toISOString(),
       descripcionLente: receta.descripcion,
       medicionAnteojos: receta.medicionAnteojos.trim(),
+      qnaInclusion: receta.qnaInclusion.trim(),
       clavePresupuestal: '1A14-009-027',
       checklist: {} as any,
       evidencias: [],
@@ -1515,6 +1544,12 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
                 <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                   value={beneficiario.entidadLaboral}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, entidadLaboral: e.target.value }); }} />
+              </div>
+              <div>
+                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">OOAD</label>
+                <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                  value={beneficiario.ooad}
+                  onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, ooad: e.target.value }); }} />
               </div>
 
               {beneficiario.tipo === TipoBeneficiario.HIJO && (
@@ -1632,8 +1667,16 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               <input placeholder="Ej. CCT-IMSS/2026-P1" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.contratoColectivoAplicable} onChange={(e) => { setStepError(''); setReceta({ ...receta, contratoColectivoAplicable: e.target.value }); }} />
             </div>
             <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Qna/Mes inclusion</label>
+              <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.qnaInclusion} onChange={(e) => { setStepError(''); setReceta({ ...receta, qnaInclusion: e.target.value }); }} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Fecha expedicion de receta</label>
+              <input type="date" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black text-slate-800 shadow-inner" value={receta.fechaExpedicionReceta} onChange={(e) => { setStepError(''); setReceta({ ...receta, fechaExpedicionReceta: e.target.value }); }} />
+            </div>
+            <div>
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Medicion de anteojos (opcional)</label>
-              <input placeholder="Puede dejarse vacio para llenado manual" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-bold text-slate-800 shadow-inner" value={receta.medicionAnteojos} onChange={(e) => { setStepError(''); setReceta({ ...receta, medicionAnteojos: e.target.value }); }} />
+              <input placeholder="Puede dejarse vacio" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-bold text-slate-800 shadow-inner" value={receta.medicionAnteojos} onChange={(e) => { setStepError(''); setReceta({ ...receta, medicionAnteojos: e.target.value }); }} />
             </div>
             <div className="flex gap-6">
               <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
