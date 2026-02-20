@@ -63,6 +63,11 @@ interface PrintMetadata {
 
 const SESSION_INVALID_MESSAGES = SESSION_INVALID_TOKENS;
 
+const formatStatusLabel = (estatus: string) => {
+  if (estatus === EstatusWorkflow.EN_REVISION_DOCUMENTAL) return 'SOLICITADO';
+  return String(estatus || '').replace(/_/g, ' ');
+};
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers'>('dashboard');
   const [user, setUser] = useState<User | null>(null);
@@ -545,13 +550,13 @@ const App: React.FC = () => {
 
           <nav className="mobile-scroll-x flex-1 px-3 lg:px-4 lg:space-y-2 mt-2 lg:mt-6 flex lg:block gap-2">
             <SidebarItem icon={<LayoutDashboard size={20} />} label="Tablero" active={activeTab === 'dashboard'} onClick={() => goToTab('dashboard')} />
-            <SidebarItem icon={<Search size={20} />} label="Bandeja" active={activeTab === 'tramites'} onClick={() => goToTab('tramites')} />
+            <SidebarItem icon={<Search size={20} />} label="Tramites" active={activeTab === 'tramites'} onClick={() => goToTab('tramites')} />
             {canAccessTab('nuevo') && (
               <SidebarItem icon={<PlusCircle size={20} />} label="Nueva Captura" active={activeTab === 'nuevo'} onClick={() => goToTab('nuevo')} />
             )}
             {/* vista central deshabilitada por requerimiento operativo */}
             {canAccessTab('adminUsers') && (
-              <SidebarItem icon={<Settings size={20} />} label="Usuarios" active={activeTab === 'adminUsers'} onClick={() => goToTab('adminUsers')} />
+              <SidebarItem icon={<Settings size={20} />} label="Configuracion" active={activeTab === 'adminUsers'} onClick={() => goToTab('adminUsers')} />
             )}
           </nav>
 
@@ -618,17 +623,11 @@ const App: React.FC = () => {
                     <button
                       className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-slate-50 text-slate-700 flex items-center gap-2"
                       onClick={() => {
-                        setShowChangePasswordModal(true);
+                        setActiveTab('adminUsers');
                         setUserMenuOpen(false);
                       }}
                     >
-                      <KeyRound size={16} /> Cambiar contraseña
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-red-50 text-red-600 flex items-center gap-2"
-                      onClick={handleLogout}
-                    >
-                      <LogOut size={16} /> Cerrar sesión
+                      <Settings size={16} /> Ir a Configuracion
                     </button>
                   </div>
                 )}
@@ -655,7 +654,7 @@ const App: React.FC = () => {
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
             {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} /> : <AccessDeniedView />)}
             {/* central view removida por operacion */}
-            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} /> : <AccessDeniedView />)}
+            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
           </div>
         </main>
 
@@ -762,7 +761,7 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
   );
 };
 
-const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
+const AdminUsersView = ({ currentUser, onChangePassword, onLogout }: { currentUser: User; onChangePassword: () => void; onLogout: () => void }) => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [nombre, setNombre] = useState('');
   const [matricula, setMatricula] = useState('');
@@ -779,7 +778,12 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
   useEffect(() => { refresh(); }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-wrap gap-3">
+        <button className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" onClick={onChangePassword}>Cambiar contraseña</button>
+        <button className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-black" onClick={onLogout}>Cerrar sesión</button>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div className="bg-white rounded-3xl p-8 border border-slate-100">
         <h3 className="font-black uppercase mb-6">Alta de Capturista</h3>
         {feedback && <p className="mb-3 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg px-3 py-2">{feedback}</p>}
@@ -862,6 +866,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -1010,7 +1015,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
             </td>
             <td className="px-10 py-8 text-center">
               <span className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${(COLOR_ESTATUS as any)[t.estatus]}`}>
-                {t.estatus.replace(/_/g, ' ')}
+                {formatStatusLabel(t.estatus)}
               </span>
             </td>
             <td className="px-10 py-8 text-right">
@@ -1069,7 +1074,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                <div className="flex items-center gap-6">
                  <h2 className="text-4xl font-black tracking-tighter">{tramite.folio}</h2>
                  <span className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${(COLOR_ESTATUS as any)[tramite.estatus]}`}>
-                   {tramite.estatus.replace(/_/g, ' ')}
+                   {formatStatusLabel(tramite.estatus)}
                  </span>
                </div>
                <p className="text-imss-gold font-black text-[10px] uppercase tracking-[0.3em] mt-3">SISTRA ID: {tramite.id}</p>
@@ -1096,7 +1101,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
           <div className="mobile-scroll-x flex border-b border-slate-100 bg-slate-50 px-2 lg:px-12">
              <TabButton label="Información General" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
              <TabButton label="Historial Institucional" active={activeTab === 'tarjeta'} onClick={() => setActiveTab('tarjeta')} />
-             <TabButton label="Bitácora Cloud" active={activeTab === 'Bitácora'} onClick={() => setActiveTab('Bitácora')} />
+             {/* Bitacora Cloud oculto por requerimiento */}
           </div>
 
           <div className="flex-1 overflow-auto p-4 lg:p-12 bg-white">
@@ -1129,35 +1134,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
               </div>
             )}
 
-            {activeTab === 'Bitácora' && (
-              <div className="space-y-6">
-                 {Bitácora.length > 0 ? Bitácora.map((b) => (
-                   <div key={b.id} className="p-6 bg-slate-50 border-l-[6px] border-imss rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-4">
-                        <p className="font-black text-imss-dark text-sm uppercase">{b.accion}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(b.fecha).toLocaleString()}</p>
-                      </div>
-                      <p className="text-sm text-slate-600 font-medium leading-relaxed mb-2">{b.descripcion}</p>
-                      {b.categoria && (
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Categoria: {b.categoria}</p>
-                      )}
-                      {b.datos?.folio && (
-                        <p className="text-[10px] font-bold text-slate-500 mb-4">
-                          Folio: {b.datos.folio} · Emision: {b.datos.emision || 'N/A'} · Documento: {b.datos.documento || 'N/A'}
-                        </p>
-                      )}
-                      <div className="pt-4 border-t border-slate-200 flex items-center gap-2">
-                         <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[8px] font-black">{b.usuario?.charAt(0)}</div>
-                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Operador Cloud: {b.usuario}</p>
-                      </div>
-                   </div>
-                 )) : (
-                   <div className="text-center py-32 bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-100">
-                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] opacity-40">Bitácora en blanco</p>
-                   </div>
-                 )}
-              </div>
-            )}
+            {/* Bitacora Cloud removido por requerimiento */}
 
             {activeTab === 'tarjeta' && (
               <div className="grid grid-cols-1 gap-6">
@@ -1174,7 +1151,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                        </div>
                      </div>
                      <span className={`px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] ${(COLOR_ESTATUS as any)[d.estatus]}`}>
-                        {d.estatus.replace(/_/g, ' ')}
+                        {formatStatusLabel(d.estatus)}
                      </span>
                    </div>
                  )) : (
