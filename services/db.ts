@@ -52,10 +52,19 @@ const normalizeMatricula = (matricula: string) => matricula.trim().toUpperCase()
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
   '99032103': 'moises.beltran@imss.gob.mx',
 };
+const MATRICULA_EMAIL_ALIASES: Record<string, string[]> = {
+  '99032103': ['moises.beltran@imss.gob.mx', 'moises.beltranx7@gmail.com'],
+};
 const matriculaToEmail = (matricula: string) => {
   const normalized = normalizeMatricula(matricula);
   if (MATRICULA_EMAIL_OVERRIDES[normalized]) return MATRICULA_EMAIL_OVERRIDES[normalized];
   return `${normalized.toLowerCase()}@${AUTH_EMAIL_DOMAIN}`;
+};
+const matriculaToEmailCandidates = (matricula: string): string[] => {
+  const normalized = normalizeMatricula(matricula);
+  const aliases = MATRICULA_EMAIL_ALIASES[normalized] || [];
+  const primary = matriculaToEmail(normalized);
+  return Array.from(new Set([primary, ...aliases]));
 };
 
 const getCreatorAuth = async () => {
@@ -105,7 +114,7 @@ export const UX_MESSAGES = {
   LOGIN_GENERIC_ERROR: 'No fue posible iniciar sesión.',
   LOGIN_REQUIRED: 'Captura matrícula y contraseña.',
   LOGIN_PASSWORD_MIN: `La contraseña debe tener al menos ${VALIDATION_RULES.LOGIN_PASSWORD_MIN} caracteres.`,
-  UPDATE_STATUS_DENIED: 'Solo ADMIN_SISTEMA puede validar importes y autorizar.',
+  UPDATE_STATUS_DENIED: 'Solo ADMIN_SISTEMA o AUTORIZADOR_JSDP_DSPNC pueden validar importes y autorizar.',
   CREATE_DENIED: 'Perfil de consulta sin permisos de captura.'
 };
 
@@ -115,7 +124,7 @@ export const canAccessTabByRole = (role: Role, tab: AppTab): boolean => {
   return (TABS_BY_ROLE[role] || ['dashboard', 'tramites']).includes(tab);
 };
 
-export const canAuthorizeImporte = (role: Role): boolean => role === Role.ADMIN_SISTEMA;
+export const canAuthorizeImporte = (role: Role): boolean => role === Role.ADMIN_SISTEMA || role === Role.AUTORIZADOR_JSDP_DSPNC;
 
 export const validateLoginInput = (matricula: string, password: string): string | null => {
   const matriculaNormalized = normalizeMatricula(matricula || '');
@@ -259,31 +268,51 @@ export const loginWithMatricula = async (matricula: string, password: string): P
   }
 
   try {
-    const email = matriculaToEmail(matriculaNormalized);
-    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const candidates = matriculaToEmailCandidates(matriculaNormalized);
 
-    const userDoc = await getDoc(doc(db, 'usuarios', cred.user.uid));
-    if (!userDoc.exists()) {
-      await signOut(auth);
-      throw new AuthError('INVALID_SESSION', 'Tu cuenta no está mapeada en usuarios/{uid}.');
+    let lastAuthError: any = null;
+    for (const email of candidates) {
+      try {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+
+        const userDoc = await getDoc(doc(db, 'usuarios', cred.user.uid));
+        if (!userDoc.exists()) {
+          await signOut(auth);
+          throw new AuthError('INVALID_SESSION', 'Tu cuenta no está mapeada en usuarios/{uid}.');
+        }
+
+        const user = { id: cred.user.uid, ...(userDoc.data() as Omit<User, 'id'>) } as User;
+
+        if (!user.activo) {
+          await signOut(auth);
+          throw new AuthError('INACTIVE_USER', 'Tu cuenta está inactiva. Contacta al administrador.');
+        }
+
+        currentUserProfile = user;
+        return user;
+      } catch (candidateError: any) {
+        const code = candidateError?.code || '';
+        if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
+          lastAuthError = candidateError;
+          continue;
+        }
+        if (candidateError instanceof AuthError) throw candidateError;
+        lastAuthError = candidateError;
+      }
     }
 
-    const user = { id: cred.user.uid, ...(userDoc.data() as Omit<User, 'id'>) } as User;
-
-    if (!user.activo) {
-      await signOut(auth);
-      throw new AuthError('INACTIVE_USER', 'Tu cuenta está inactiva. Contacta al administrador.');
+    const finalCode = lastAuthError?.code || '';
+    if (finalCode === 'auth/invalid-credential' || finalCode === 'auth/user-not-found' || finalCode === 'auth/wrong-password') {
+      throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
     }
 
-    currentUserProfile = user;
-    return user;
+    throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
   } catch (error: any) {
+    if (error instanceof AuthError) throw error;
     const code = error?.code || '';
     if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
       throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
     }
-
-    if (error instanceof AuthError) throw error;
     throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
   }
 };

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './App.css';
 import { 
   Role, 
@@ -9,7 +9,7 @@ import {
   User,
   Bitacora
 } from './types';
-import { dbService, ensureSession, loginWithMatricula, logoutSession, adminCreateCapturista, adminResetPassword, AuthError, validatePasswordStrength, canAccessTabByRole, canAuthorizeImporte, validateLoginInput, validateNuevoTramiteStep1, validateNuevoTramiteStep2, UX_MESSAGES, TABS_BY_ROLE, SESSION_INVALID_TOKENS } from './services/db';
+import { dbService, ensureSession, loginWithMatricula, logoutSession, adminCreateCapturista, adminResetPassword, changeOwnPassword, AuthError, validatePasswordStrength, canAccessTabByRole, canAuthorizeImporte, validateLoginInput, validateNuevoTramiteStep1, validateNuevoTramiteStep2, UX_MESSAGES, TABS_BY_ROLE, SESSION_INVALID_TOKENS } from './services/db';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -28,7 +28,11 @@ import {
   ClipboardCheck,
   Settings,
   LogOut,
-  DollarSign
+  DollarSign,
+  ChevronDown,
+  KeyRound,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { generateFolio } from './utils';
 import { COLOR_ESTATUS } from './constants';
@@ -69,6 +73,9 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uiMessage, setUiMessage] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   // EFECTO DE INICIALIZACIÓN: Único punto de entrada
   useEffect(() => {
@@ -101,6 +108,17 @@ const App: React.FC = () => {
 
     initialize();
     return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
   const forceLogoutWithMessage = (message: string) => {
@@ -215,6 +233,8 @@ const App: React.FC = () => {
     setTramites([]);
     setSelectedTramite(null);
     setActiveTab('dashboard');
+    setUserMenuOpen(false);
+    setShowChangePasswordModal(false);
     setUiMessage('Sesión cerrada correctamente.');
   };
 
@@ -499,6 +519,40 @@ const App: React.FC = () => {
                 />
               </div>
               {loading && <Loader2 className="animate-spin text-imss" size={24} />}
+
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                  onClick={() => setUserMenuOpen((prev) => !prev)}
+                  aria-label="Abrir menú de usuario"
+                >
+                  <div className="w-8 h-8 rounded-full bg-imss text-white text-xs font-black flex items-center justify-center">
+                    {user?.nombre?.charAt(0)}
+                  </div>
+                  <span className="hidden lg:inline text-xs font-black uppercase text-slate-700 max-w-24 truncate">{user?.nombre}</span>
+                  <ChevronDown size={16} className="text-slate-500" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 p-2">
+                    <button
+                      className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                      onClick={() => {
+                        setShowChangePasswordModal(true);
+                        setUserMenuOpen(false);
+                      }}
+                    >
+                      <KeyRound size={16} /> Cambiar contraseña
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-red-50 text-red-600 flex items-center gap-2"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={16} /> Cerrar sesión
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
@@ -516,6 +570,20 @@ const App: React.FC = () => {
             {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} /> : <AccessDeniedView />)}
           </div>
         </main>
+
+        {showChangePasswordModal && (
+          <ChangePasswordModal
+            onClose={() => setShowChangePasswordModal(false)}
+            onSuccess={(message) => {
+              setUiMessage(message);
+              setShowChangePasswordModal(false);
+            }}
+            onAuthFailure={(message) => {
+              forceLogoutWithMessage(message);
+              setShowChangePasswordModal(false);
+            }}
+          />
+        )}
 
         {selectedTramite && (
           <TramiteDetailModal 
@@ -537,6 +605,7 @@ const App: React.FC = () => {
 const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
   const [matricula, setMatricula] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = (e: any) => {
@@ -564,7 +633,25 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         <label className="field-label">Matrícula</label>
         <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className="field-input mb-5 uppercase" placeholder="Ej. CAP001" required />
         <label className="field-label">Contraseña</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="field-input mb-6" placeholder="********" required />
+        <div className="relative mb-6">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="field-input pr-12"
+            placeholder="********"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         {infoMessage && <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm font-bold mb-4">{infoMessage}</p>}
         {(localError || error) && <p className="text-red-600 text-sm font-bold mb-4">{localError || error}</p>}
         <button disabled={loading} className="w-full py-4 rounded-xl btn-institutional disabled:opacity-50">
@@ -880,7 +967,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                     {canApprove ? (
                       <>
                         <div>
-                          <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Monto a autorizar (solo admin)</label>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Monto a autorizar (admin o autorizador)</label>
                           <input
                             type="number"
                             min={0}
@@ -902,7 +989,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                     ) : (
                       <div className="flex items-center gap-4 text-slate-400 bg-white p-6 rounded-2xl border border-slate-100">
                         <AlertTriangle size={20} />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Solo ADMIN_SISTEMA puede validar y autorizar importes.</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Solo ADMIN_SISTEMA o AUTORIZADOR_JSDP_DSPNC pueden validar y autorizar importes.</p>
                       </div>
                     )}
 
@@ -973,6 +1060,107 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
             )}
           </div>
        </div>
+    </div>
+  );
+};
+
+const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+  onAuthFailure: (message: string) => void;
+}) => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const strengthIssues = useMemo(() => validatePasswordStrength(newPassword), [newPassword]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeedback(null);
+
+    if (!currentPassword.trim()) {
+      setFeedback('Captura tu contraseña actual para continuar.');
+      return;
+    }
+
+    if (strengthIssues.length > 0) {
+      setFeedback(`La nueva contraseña no cumple la política: ${strengthIssues.join(' ')}`);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setFeedback('La confirmación no coincide con la nueva contraseña.');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setFeedback('La nueva contraseña debe ser diferente a la actual.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await changeOwnPassword(currentPassword, newPassword);
+      onSuccess('Contraseña actualizada correctamente. Usa la nueva contraseña en tu próximo inicio de sesión.');
+    } catch (error: any) {
+      if (error instanceof AuthError && (error.code === 'INVALID_CREDENTIALS' || error.code === 'INVALID_SESSION')) {
+        onAuthFailure('No fue posible reautenticar tu identidad. Por seguridad se cerró tu sesión. Inicia de nuevo.');
+        return;
+      }
+
+      setFeedback(error?.message || 'No se pudo cambiar la contraseña. Intenta de nuevo.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 bg-slate-900/40 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Cambiar contraseña</h3>
+          <button className="text-xs font-bold uppercase text-slate-500 hover:text-slate-800" onClick={onClose} disabled={submitting}>Cerrar</button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="field-label">Contraseña actual</label>
+            <input type="password" className="field-input" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+          </div>
+          <div>
+            <label className="field-label">Nueva contraseña</label>
+            <input type="password" className="field-input" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+            <ul className="mt-2 space-y-1 text-[11px]">
+              {[
+                { ok: newPassword.length >= 10, text: 'Mínimo 10 caracteres' },
+                { ok: /[A-Z]/.test(newPassword), text: 'Al menos una mayúscula' },
+                { ok: /[a-z]/.test(newPassword), text: 'Al menos una minúscula' },
+                { ok: /\d/.test(newPassword), text: 'Al menos un número' },
+                { ok: /[^A-Za-z0-9]/.test(newPassword), text: 'Al menos un carácter especial' }
+              ].map((rule) => (
+                <li key={rule.text} className={rule.ok ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>
+                  {rule.ok ? '✓' : '•'} {rule.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <label className="field-label">Confirmar nueva contraseña</label>
+            <input type="password" className="field-input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+          </div>
+
+          {feedback && <p className="text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{feedback}</p>}
+
+          <div className="pt-2 flex items-center justify-end gap-3">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" disabled={submitting}>Cancelar</button>
+            <button type="submit" className="px-5 py-2 rounded-xl bg-imss text-white text-sm font-black disabled:opacity-50" disabled={submitting}>
+              {submitting ? 'Actualizando...' : 'Guardar contraseña'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
