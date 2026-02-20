@@ -1617,7 +1617,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
                     <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
-                    <p className="mt-2 text-[11px] font-bold text-amber-700">Aviso OOAD: el contrato colectivo solo aplica a personal adscrito al OOAD capturado al momento del registro.</p>
+                    <p className="mt-2 text-[11px] font-bold text-amber-700">Aviso OOAD: se debera verificar que la adscripcion se encuentre dentro del OOAD, toda vez que el contrato de anteojos esta formalizado por estado y no aplica para usuarios de otros OOAD o estados.</p>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Tipo de contratacion</label>
