@@ -11,7 +11,7 @@ const valueOrEmpty = (value?: string) => (value || '').trim();
 
 export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ beneficiario: b, dotaciones }) => {
   const baseUrl = (import.meta as any).env?.BASE_URL || '/';
-  const [logoSrc, setLogoSrc] = useState(`${baseUrl}imss-logo.jpg`);
+  const [logoSrc, setLogoSrc] = useState(`${baseUrl}imss-logo.svg`);
   const getDotacionData = (num: number) => dotaciones.find(d => d.dotacionNumero === num);
   const titularNombre = b.tipo === TipoBeneficiario.HIJO
     ? valueOrEmpty(b.titularNombreCompleto)
@@ -45,7 +45,7 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
     <div className="print-sheet-letter print-container p-[8mm] text-[10px] font-sans uppercase text-black leading-tight">
       <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
         <div className="flex gap-3 items-center">
-          <div className="w-12 h-12"><img src={logoSrc} onError={() => setLogoSrc(`${baseUrl}imss-logo.svg`)} alt="IMSS" className="w-full h-full object-contain" /></div>
+          <div className="w-12 h-12"><img src={logoSrc} onError={() => setLogoSrc(`${baseUrl}imss-logo.jpg`)} alt="IMSS" className="w-full h-full object-contain" /></div>
           <div>
             <h1 className="text-[12px] font-black">Tarjeta de Control de Dotacion de Anteojos</h1>
             <div className="flex gap-2 items-baseline text-[9px]"><span className="font-bold">OOAD:</span><span className="border-b border-black min-w-[160px] font-bold">{valueOrEmpty(b.ooad)}</span></div>

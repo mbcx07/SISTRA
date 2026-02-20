@@ -11,7 +11,7 @@ const valueOrEmpty = (value?: string) => (value || '').trim();
 export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
   const b = tramite.beneficiario;
   const baseUrl = (import.meta as any).env?.BASE_URL || '/';
-  const [logoSrc, setLogoSrc] = useState(`${baseUrl}imss-logo.jpg`);
+  const [logoSrc, setLogoSrc] = useState(`${baseUrl}imss-logo.svg`);
   const titularNombre = b.tipo === TipoBeneficiario.HIJO
     ? valueOrEmpty(b.titularNombreCompleto)
     : `${valueOrEmpty(b.apellidoPaterno)} ${valueOrEmpty(b.apellidoMaterno)} ${valueOrEmpty(b.nombre)}`.trim();
@@ -28,7 +28,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
       <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12">
-            <img src={logoSrc} onError={() => setLogoSrc(`${baseUrl}imss-logo.svg`)} alt="IMSS" className="w-full h-full object-contain" />
+            <img src={logoSrc} onError={() => setLogoSrc(`${baseUrl}imss-logo.jpg`)} alt="IMSS" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-[13px] font-black">Instituto Mexicano del Seguro Social</h1>
