@@ -31,6 +31,9 @@ jobs:
           rm -f package-lock.json
           npm install --no-package-lock --include=optional
 
+      - name: Ensure Rollup linux binary
+        run: npm install @rollup/rollup-linux-x64-gnu --no-save
+
       - name: Build
         run: npm run build
 
