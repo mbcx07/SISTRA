@@ -75,6 +75,7 @@ const App: React.FC = () => {
   const [uiMessage, setUiMessage] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [captureEditTarget, setCaptureEditTarget] = useState<Tramite | null>(null);
   const [presupuestoGlobal, setPresupuestoGlobal] = useState<number>(() => {
     const raw = localStorage.getItem('sistra.presupuestoGlobal');
     const parsed = Number(raw);
@@ -411,91 +412,27 @@ const App: React.FC = () => {
     }
   };
 
-  const handleEditCapture = async (tramite: Tramite) => {
-    const nombre = window.prompt('Nombre(s) del beneficiario:', tramite.beneficiario?.nombre || '');
-    if (nombre === null) return;
-    const apellidoPaterno = window.prompt('Apellido paterno:', tramite.beneficiario?.apellidoPaterno || '');
-    if (apellidoPaterno === null) return;
-    const apellidoMaterno = window.prompt('Apellido materno:', tramite.beneficiario?.apellidoMaterno || '');
-    if (apellidoMaterno === null) return;
-    const nss = window.prompt('NSS titular:', tramite.beneficiario?.nssTrabajador || '');
-    if (nss === null) return;
-    const nssHijo = window.prompt('NSS hija/hijo:', tramite.beneficiario?.nssHijo || '');
-    if (nssHijo === null) return;
-    const titularNombreCompleto = window.prompt('Nombre completo de persona titular:', tramite.beneficiario?.titularNombreCompleto || '');
-    if (titularNombreCompleto === null) return;
-    const fechaNacimiento = window.prompt('Fecha de nacimiento (YYYY-MM-DD):', tramite.beneficiario?.fechaNacimiento ? String(tramite.beneficiario.fechaNacimiento).slice(0, 10) : '');
-    if (fechaNacimiento === null) return;
-    const entidadLaboral = window.prompt('Unidad/adscripcion laboral:', tramite.beneficiario?.entidadLaboral || '');
-    if (entidadLaboral === null) return;
-    const ooad = window.prompt('OOAD:', tramite.beneficiario?.ooad || '');
-    if (ooad === null) return;
-    const matricula = window.prompt('Matricula:', tramite.beneficiario?.matricula || '');
-    if (matricula === null) return;
-    const claveAdscripcion = window.prompt('Clave adscripcion:', tramite.beneficiario?.claveAdscripcion || '');
-    if (claveAdscripcion === null) return;
-    const tipoContratacion = window.prompt('Tipo de contratacion:', tramite.beneficiario?.tipoContratacion || '');
-    if (tipoContratacion === null) return;
-    const constanciaEstudiosVigente = window.prompt('Constancia de estudios vigente (SI/NO):', tramite.beneficiario?.constanciaEstudiosVigente ? 'SI' : 'NO');
-    if (constanciaEstudiosVigente === null) return;
-    const fechaConstanciaEstudios = window.prompt('Fecha constancia (YYYY-MM-DD):', tramite.beneficiario?.fechaConstanciaEstudios ? String(tramite.beneficiario.fechaConstanciaEstudios).slice(0, 10) : '');
-    if (fechaConstanciaEstudios === null) return;
-    const contratoColectivoAplicable = window.prompt('Contrato colectivo aplicable (obligatorio):', tramite.contratoColectivoAplicable || '');
-    if (contratoColectivoAplicable === null) return;
+  const handleEditCapture = (tramite: Tramite) => {
+    setCaptureEditTarget(tramite);
+  };
 
-    const folioReceta = window.prompt('Folio de receta:', tramite.folioRecetaImss || '');
-    if (folioReceta === null) return;
-    const fechaExpedicionReceta = window.prompt('Fecha expedicion receta (YYYY-MM-DD):', tramite.fechaExpedicionReceta ? String(tramite.fechaExpedicionReceta).slice(0, 10) : '');
-    if (fechaExpedicionReceta === null) return;
-    const descripcion = window.prompt('Diagnostico/descripcion de lente:', tramite.descripcionLente || '');
-    if (descripcion === null) return;
-    const medicionAnteojos = window.prompt('Medicion de anteojos:', tramite.medicionAnteojos || '');
-    if (medicionAnteojos === null) return;
-    const qnaInclusion = window.prompt('Qna/Periodo de inclusion:', tramite.qnaInclusion || '');
-    if (qnaInclusion === null) return;
-    const fechaRecepcionOptica = window.prompt('Fecha recepcion optica (YYYY-MM-DD):', tramite.fechaRecepcionOptica ? String(tramite.fechaRecepcionOptica).slice(0, 10) : '');
-    if (fechaRecepcionOptica === null) return;
-    const fechaEntregaOptica = window.prompt('Fecha entrega optica (YYYY-MM-DD):', tramite.fechaEntregaOptica ? String(tramite.fechaEntregaOptica).slice(0, 10) : '');
-    if (fechaEntregaOptica === null) return;
-
+  const handleSaveCaptureEdit = async (tramiteId: string, payload: any) => {
+    if (!user) return;
     setLoading(true);
     try {
-      await dbService.saveTramite({
-        id: tramite.id,
-        contratoColectivoAplicable: contratoColectivoAplicable.trim(),
-        beneficiario: {
-          ...tramite.beneficiario,
-          nombre: nombre.trim(),
-          apellidoPaterno: apellidoPaterno.trim(),
-          apellidoMaterno: apellidoMaterno.trim(),
-          nssTrabajador: String(nss).replace(/\D/g, '').slice(0, 11),
-          nssHijo: String(nssHijo).replace(/\D/g, '').slice(0, 11),
-          titularNombreCompleto: titularNombreCompleto.trim(),
-          fechaNacimiento: fechaNacimiento.trim(),
-          entidadLaboral: entidadLaboral.trim(),
-          ooad: ooad.trim(),
-          matricula: matricula.trim(),
-          claveAdscripcion: claveAdscripcion.trim(),
-          tipoContratacion: tipoContratacion.trim(),
-          constanciaEstudiosVigente: String(constanciaEstudiosVigente).trim().toUpperCase() === 'SI',
-          fechaConstanciaEstudios: fechaConstanciaEstudios.trim()
-        },
-        folioRecetaImss: folioReceta.trim(),
-        fechaExpedicionReceta: fechaExpedicionReceta.trim() ? new Date(fechaExpedicionReceta.trim()).toISOString() : '',
-        descripcionLente: descripcion.trim(),
-        medicionAnteojos: (medicionAnteojos || '').trim(),
-        qnaInclusion: qnaInclusion.trim(),
-        fechaRecepcionOptica: fechaRecepcionOptica.trim() ? new Date(fechaRecepcionOptica.trim()).toISOString() : '',
-        fechaEntregaOptica: fechaEntregaOptica.trim() ? new Date(fechaEntregaOptica.trim()).toISOString() : ''
-      } as Partial<Tramite>);
+      await dbService.saveTramite({ id: tramiteId, ...payload } as Partial<Tramite>);
+      const target = captureEditTarget;
       await dbService.addBitácora({
-        tramiteId: tramite.id,
+        tramiteId,
         usuario: user.nombre,
         accion: 'EDICION_CAPTURA_COMPLETA',
         categoria: 'WORKFLOW',
-        descripcion: `Captura actualizada de forma integral para folio ${tramite.folio}.`
+        descripcion: `Captura actualizada de forma integral para folio ${target?.folio || tramiteId}.`
       });
+      setCaptureEditTarget(null);
       await loadData();
+      const refreshed = (await dbService.getTramites()).find((t) => t.id === tramiteId);
+      if (refreshed) setSelectedTramite(refreshed);
       setUiMessage('Captura actualizada correctamente.');
     } catch (e: any) {
       setUiMessage(e?.message || 'No se pudo actualizar la captura.');
@@ -746,6 +683,15 @@ const App: React.FC = () => {
             onDeleteTramite={handleDeleteTramite}
             onPrint={handlePrintRequest}
             historicalDotations={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
+            loading={loading}
+          />
+        )}
+
+        {captureEditTarget && (
+          <EditCaptureModal
+            tramite={captureEditTarget}
+            onClose={() => setCaptureEditTarget(null)}
+            onSave={handleSaveCaptureEdit}
             loading={loading}
           />
         )}
@@ -1243,6 +1189,123 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
             )}
           </div>
        </div>
+    </div>
+  );
+};
+
+const toDateInputValue = (value?: string) => value ? String(value).slice(0, 10) : '';
+
+const EditCaptureModal = ({ tramite, onClose, onSave, loading }: {
+  tramite: Tramite;
+  onClose: () => void;
+  onSave: (tramiteId: string, payload: Partial<Tramite>) => Promise<void>;
+  loading: boolean;
+}) => {
+  const [form, setForm] = useState({
+    tipo: tramite.beneficiario?.tipo || TipoBeneficiario.TRABAJADOR,
+    nombre: tramite.beneficiario?.nombre || '',
+    apellidoPaterno: tramite.beneficiario?.apellidoPaterno || '',
+    apellidoMaterno: tramite.beneficiario?.apellidoMaterno || '',
+    nssTrabajador: tramite.beneficiario?.nssTrabajador || '',
+    nssHijo: tramite.beneficiario?.nssHijo || '',
+    titularNombreCompleto: tramite.beneficiario?.titularNombreCompleto || '',
+    fechaNacimiento: toDateInputValue(tramite.beneficiario?.fechaNacimiento),
+    entidadLaboral: tramite.beneficiario?.entidadLaboral || '',
+    ooad: tramite.beneficiario?.ooad || '',
+    matricula: tramite.beneficiario?.matricula || '',
+    claveAdscripcion: tramite.beneficiario?.claveAdscripcion || '',
+    tipoContratacion: tramite.beneficiario?.tipoContratacion || '',
+    constanciaEstudiosVigente: !!tramite.beneficiario?.constanciaEstudiosVigente,
+    requiereConstanciaEstudios: !!tramite.beneficiario?.requiereConstanciaEstudios,
+    fechaConstanciaEstudios: toDateInputValue(tramite.beneficiario?.fechaConstanciaEstudios),
+    contratoColectivoAplicable: tramite.contratoColectivoAplicable || '',
+    folioRecetaImss: tramite.folioRecetaImss || '',
+    fechaExpedicionReceta: toDateInputValue(tramite.fechaExpedicionReceta),
+    descripcionLente: tramite.descripcionLente || '',
+    medicionAnteojos: tramite.medicionAnteojos || '',
+    qnaInclusion: tramite.qnaInclusion || '',
+    fechaRecepcionOptica: toDateInputValue(tramite.fechaRecepcionOptica),
+    fechaEntregaOptica: toDateInputValue(tramite.fechaEntregaOptica)
+  });
+
+  const setField = (name: string, value: any) => setForm((prev) => ({ ...prev, [name]: value }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSave(tramite.id, {
+      contratoColectivoAplicable: form.contratoColectivoAplicable.trim(),
+      beneficiario: {
+        ...tramite.beneficiario,
+        tipo: form.tipo,
+        nombre: form.nombre.trim(),
+        apellidoPaterno: form.apellidoPaterno.trim(),
+        apellidoMaterno: form.apellidoMaterno.trim(),
+        nssTrabajador: String(form.nssTrabajador).replace(/\D/g, '').slice(0, 11),
+        nssHijo: String(form.nssHijo).replace(/\D/g, '').slice(0, 11),
+        titularNombreCompleto: form.titularNombreCompleto.trim(),
+        fechaNacimiento: form.fechaNacimiento.trim(),
+        entidadLaboral: form.entidadLaboral.trim(),
+        ooad: form.ooad.trim(),
+        matricula: form.matricula.trim(),
+        claveAdscripcion: form.claveAdscripcion.trim(),
+        tipoContratacion: form.tipoContratacion.trim(),
+        requiereConstanciaEstudios: !!form.requiereConstanciaEstudios,
+        constanciaEstudiosVigente: !!form.constanciaEstudiosVigente,
+        fechaConstanciaEstudios: form.fechaConstanciaEstudios.trim()
+      },
+      folioRecetaImss: form.folioRecetaImss.trim(),
+      fechaExpedicionReceta: form.fechaExpedicionReceta.trim() ? new Date(form.fechaExpedicionReceta).toISOString() : '',
+      descripcionLente: form.descripcionLente.trim(),
+      medicionAnteojos: form.medicionAnteojos.trim(),
+      qnaInclusion: form.qnaInclusion.trim(),
+      fechaRecepcionOptica: form.fechaRecepcionOptica.trim() ? new Date(form.fechaRecepcionOptica).toISOString() : '',
+      fechaEntregaOptica: form.fechaEntregaOptica.trim() ? new Date(form.fechaEntregaOptica).toISOString() : ''
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-imss-dark/80 backdrop-blur-sm flex items-center justify-center p-2 lg:p-6" role="dialog" aria-modal="true" aria-label="Editar captura completa">
+      <div className="w-full max-w-5xl max-h-[96vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+        <div className="px-4 py-4 lg:px-8 bg-imss-dark text-white flex items-center justify-between">
+          <h3 className="text-sm lg:text-lg font-black uppercase tracking-wider">Editar captura completa</h3>
+          <button type="button" onClick={onClose} className="text-xs font-bold uppercase">Cerrar</button>
+        </div>
+        <form onSubmit={submit} className="flex-1 overflow-auto p-4 lg:p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <select className="field-input" value={form.tipo} onChange={(e) => setField('tipo', e.target.value)}>
+            <option value={TipoBeneficiario.TRABAJADOR}>Trabajador(a)</option>
+            <option value={TipoBeneficiario.HIJO}>Hija/Hijo</option>
+            <option value={TipoBeneficiario.JUBILADO_PENSIONADO}>Jubilado/Pensionado</option>
+          </select>
+          <input className="field-input" placeholder="Nombre(s)" value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} />
+          <input className="field-input" placeholder="Apellido paterno" value={form.apellidoPaterno} onChange={(e) => setField('apellidoPaterno', e.target.value)} />
+          <input className="field-input" placeholder="Apellido materno" value={form.apellidoMaterno} onChange={(e) => setField('apellidoMaterno', e.target.value)} />
+          <input className="field-input" placeholder="NSS titular" inputMode="numeric" value={form.nssTrabajador} onChange={(e) => setField('nssTrabajador', e.target.value)} />
+          <input className="field-input" placeholder="NSS hija/hijo" inputMode="numeric" value={form.nssHijo} onChange={(e) => setField('nssHijo', e.target.value)} />
+          <input className="field-input md:col-span-2" placeholder="Titular nombre completo" value={form.titularNombreCompleto} onChange={(e) => setField('titularNombreCompleto', e.target.value)} />
+          <input className="field-input" type="date" value={form.fechaNacimiento} onChange={(e) => setField('fechaNacimiento', e.target.value)} />
+          <input className="field-input" placeholder="Unidad/adscripcion" value={form.entidadLaboral} onChange={(e) => setField('entidadLaboral', e.target.value)} />
+          <input className="field-input" placeholder="OOAD" value={form.ooad} onChange={(e) => setField('ooad', e.target.value)} />
+          <input className="field-input" placeholder="Matricula" value={form.matricula} onChange={(e) => setField('matricula', e.target.value)} />
+          <input className="field-input" placeholder="Clave adscripcion" value={form.claveAdscripcion} onChange={(e) => setField('claveAdscripcion', e.target.value)} />
+          <input className="field-input" placeholder="Tipo contratacion" value={form.tipoContratacion} onChange={(e) => setField('tipoContratacion', e.target.value)} />
+          <label className="text-xs font-bold flex items-center gap-2"><input type="checkbox" checked={form.requiereConstanciaEstudios} onChange={(e) => setField('requiereConstanciaEstudios', e.target.checked)} />Requiere constancia</label>
+          <label className="text-xs font-bold flex items-center gap-2"><input type="checkbox" checked={form.constanciaEstudiosVigente} onChange={(e) => setField('constanciaEstudiosVigente', e.target.checked)} />Constancia vigente</label>
+          <input className="field-input" type="date" value={form.fechaConstanciaEstudios} onChange={(e) => setField('fechaConstanciaEstudios', e.target.value)} />
+          <input className="field-input md:col-span-2" placeholder="Contrato colectivo aplicable" value={form.contratoColectivoAplicable} onChange={(e) => setField('contratoColectivoAplicable', e.target.value)} />
+          <input className="field-input" placeholder="Folio receta IMSS" value={form.folioRecetaImss} onChange={(e) => setField('folioRecetaImss', e.target.value)} />
+          <input className="field-input" type="date" value={form.fechaExpedicionReceta} onChange={(e) => setField('fechaExpedicionReceta', e.target.value)} />
+          <textarea className="field-input md:col-span-2 min-h-24" placeholder="Descripcion del lente" value={form.descripcionLente} onChange={(e) => setField('descripcionLente', e.target.value)} />
+          <input className="field-input" placeholder="Medicion de anteojos" value={form.medicionAnteojos} onChange={(e) => setField('medicionAnteojos', e.target.value)} />
+          <input className="field-input" placeholder="Qna/Mes inclusion" value={form.qnaInclusion} onChange={(e) => setField('qnaInclusion', e.target.value)} />
+          <input className="field-input" type="date" value={form.fechaRecepcionOptica} onChange={(e) => setField('fechaRecepcionOptica', e.target.value)} />
+          <input className="field-input" type="date" value={form.fechaEntregaOptica} onChange={(e) => setField('fechaEntregaOptica', e.target.value)} />
+
+          <div className="md:col-span-2 flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" disabled={loading}>Cancelar</button>
+            <button type="submit" className="px-5 py-2 rounded-xl bg-imss text-white text-sm font-black disabled:opacity-50" disabled={loading}>{loading ? 'Guardando...' : 'Guardar cambios'}</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

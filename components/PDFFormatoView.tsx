@@ -10,7 +10,7 @@ const valueOrEmpty = (value?: string) => (value || '').trim();
 
 export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
   const b = tramite.beneficiario;
-  const [logoSrc, setLogoSrc] = useState('/imss-logo.svg');
+  const [logoSrc, setLogoSrc] = useState('/imss-logo.jpg');
   const titularNombre = b.tipo === TipoBeneficiario.HIJO
     ? valueOrEmpty(b.titularNombreCompleto)
     : `${valueOrEmpty(b.apellidoPaterno)} ${valueOrEmpty(b.apellidoMaterno)} ${valueOrEmpty(b.nombre)}`.trim();
@@ -27,7 +27,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
       <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12">
-            <img src={logoSrc} onError={() => setLogoSrc('https://upload.wikimedia.org/wikipedia/commons/7/74/IMSS_Logo.svg')} alt="IMSS" className="w-full h-full object-contain" />
+            <img src={logoSrc} onError={() => setLogoSrc('/imss-logo.svg')} alt="IMSS" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-[13px] font-black">Instituto Mexicano del Seguro Social</h1>
@@ -74,10 +74,6 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
           <p className="font-bold">Descripcion del lente</p>
           <div className="border border-black min-h-[40px] p-2 font-semibold leading-tight">{valueOrEmpty(tramite.descripcionLente)}</div>
         </div>
-        <div>
-          <p className="font-bold">Medicion de anteojos</p>
-          <div className="border-b border-black h-6 flex items-end px-2 font-semibold">{valueOrEmpty(tramite.medicionAnteojos)}</div>
-        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4">
@@ -85,7 +81,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
         <div className="flex"><span className="font-bold w-36">Clave adscripcion:</span><div className="border-b border-black flex-1 text-center font-bold">{valueOrEmpty(b.claveAdscripcion)}</div></div>
         <div className="flex"><span className="font-bold w-36">Folio receta IMSS:</span><div className="border-b border-black flex-1 text-center font-bold">{valueOrEmpty(tramite.folioRecetaImss)}</div></div>
         <div className="flex"><span className="font-bold w-36">Fecha expedicion:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(tramite.fechaExpedicionReceta)}</div></div>
-        <div className="flex"><span className="font-bold w-36">Contrato colectivo:</span><div className="border-b border-black flex-1 text-center font-bold">{valueOrEmpty(tramite.contratoColectivoAplicable)}</div></div>
+         
         <div className="flex"><span className="font-bold w-36">Fecha recepcion optica:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(tramite.fechaRecepcionOptica)}</div></div>
         <div className="flex"><span className="font-bold w-36">Fecha entrega optica:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(tramite.fechaEntregaOptica)}</div></div>
       </div>

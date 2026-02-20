@@ -10,7 +10,7 @@ const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateStri
 const valueOrEmpty = (value?: string) => (value || '').trim();
 
 export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ beneficiario: b, dotaciones }) => {
-  const [logoSrc, setLogoSrc] = useState('/imss-logo.svg');
+  const [logoSrc, setLogoSrc] = useState('/imss-logo.jpg');
   const getDotacionData = (num: number) => dotaciones.find(d => d.dotacionNumero === num);
   const titularNombre = b.tipo === TipoBeneficiario.HIJO
     ? valueOrEmpty(b.titularNombreCompleto)
@@ -44,7 +44,7 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
     <div className="print-sheet-letter print-container p-[8mm] text-[10px] font-sans uppercase text-black leading-tight">
       <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
         <div className="flex gap-3 items-center">
-          <div className="w-12 h-12"><img src={logoSrc} onError={() => setLogoSrc('https://upload.wikimedia.org/wikipedia/commons/7/74/IMSS_Logo.svg')} alt="IMSS" className="w-full h-full object-contain" /></div>
+          <div className="w-12 h-12"><img src={logoSrc} onError={() => setLogoSrc('/imss-logo.svg')} alt="IMSS" className="w-full h-full object-contain" /></div>
           <div>
             <h1 className="text-[12px] font-black">Tarjeta de Control de Dotacion de Anteojos</h1>
             <div className="flex gap-2 items-baseline text-[9px]"><span className="font-bold">OOAD:</span><span className="border-b border-black min-w-[160px] font-bold">{valueOrEmpty(b.ooad)}</span></div>
@@ -72,7 +72,7 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
         <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[250px]">Nombre(s) de la hija o hijo de la persona trabajadora:</span><span className="border-b border-black flex-1 font-bold">{nombreHijo}</span></div>
         <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Adscripcion:</span><span className="border-b border-black flex-1 font-bold">{valueOrEmpty(b.entidadLaboral)}</span></div>
         <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[160px]">Constancia de estudios:</span><span className="border-b border-black flex-1 font-bold">{b.requiereConstanciaEstudios ? (b.constanciaEstudiosVigente ? 'VIGENTE' : '') : ''}</span></div>
-        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[160px]">Contrato colectivo:</span><span className="border-b border-black flex-1 font-bold">{valueOrEmpty(dotaciones[0]?.contratoColectivoAplicable)}</span></div>
+        
       </div>
 
       <div className="border-2 border-black flex mb-3">
