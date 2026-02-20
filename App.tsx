@@ -402,6 +402,43 @@ const App: React.FC = () => {
     }
   };
 
+  const handleEditCapture = async (tramite: Tramite) => {
+    const nombre = window.prompt('Nombre(s) del beneficiario:', tramite.beneficiario?.nombre || '');
+    if (nombre === null) return;
+    const apellidoPaterno = window.prompt('Apellido paterno:', tramite.beneficiario?.apellidoPaterno || '');
+    if (apellidoPaterno === null) return;
+    const apellidoMaterno = window.prompt('Apellido materno:', tramite.beneficiario?.apellidoMaterno || '');
+    if (apellidoMaterno === null) return;
+    const nss = window.prompt('NSS titular:', tramite.beneficiario?.nssTrabajador || '');
+    if (nss === null) return;
+    const folioReceta = window.prompt('Folio de receta:', tramite.folioRecetaImss || '');
+    if (folioReceta === null) return;
+    const descripcion = window.prompt('Diagnostico/descripcion de lente:', tramite.descripcionLente || '');
+    if (descripcion === null) return;
+
+    setLoading(true);
+    try {
+      await dbService.saveTramite({
+        id: tramite.id,
+        beneficiario: {
+          ...tramite.beneficiario,
+          nombre: nombre.trim(),
+          apellidoPaterno: apellidoPaterno.trim(),
+          apellidoMaterno: apellidoMaterno.trim(),
+          nssTrabajador: String(nss).replace(/\D/g, '').slice(0, 11)
+        },
+        folioRecetaImss: folioReceta.trim(),
+        descripcionLente: descripcion.trim()
+      } as Partial<Tramite>);
+      await loadData();
+      setUiMessage('Captura actualizada correctamente.');
+    } catch (e: any) {
+      setUiMessage(e?.message || 'No se pudo actualizar la captura.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // VISTAS DE CARGA Y ERROR
   if (loading && !user) {
     return (
@@ -611,6 +648,7 @@ const App: React.FC = () => {
             user={user!}
             onClose={() => setSelectedTramite(null)} 
             onUpdateEstatus={handleUpdateEstatus}
+            onEditCapture={handleEditCapture}
             onPrint={handlePrintRequest}
             historicalDotations={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
             loading={loading}
@@ -953,7 +991,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
   </div>
 );
 
-const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, historicalDotations, loading }: any) => {
+const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCapture, onPrint, historicalDotations, loading }: any) => {
   const [activeTab, setActiveTab] = useState<'info' | 'bitacora' | 'tarjeta'>('info');
   const [bitacora, setBitacora] = useState<Bitacora[]>([]);
   // control de importe se gestiona fuera de la unidad
@@ -997,10 +1035,13 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
              </div>
              <div className="flex items-center gap-4">
                <button onClick={() => onPrint('formato')} className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5">
-                 <Printer size={20} className="text-imss-gold" /> Formato 027
+                 <Printer size={20} className="text-imss-gold" /> Imprimir/Reimprimir 027
                </button>
                <button onClick={() => onPrint('tarjeta')} className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5">
-                 <CreditCard size={20} className="text-imss-gold" /> Tarjeta 028
+                 <CreditCard size={20} className="text-imss-gold" /> Imprimir/Reimprimir 028
+               </button>
+               <button onClick={() => onEditCapture(tramite)} className="px-6 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all text-xs font-black uppercase tracking-widest border border-white/5">
+                 Editar captura
                </button>
                <button onClick={onClose} className="p-4 bg-white/5 hover:bg-white/20 rounded-2xl text-white/40 hover:text-white transition-all">
                  <XCircle size={32} />
