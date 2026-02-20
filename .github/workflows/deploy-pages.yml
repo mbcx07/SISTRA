@@ -25,10 +25,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (clean, no lockfile)
+        run: |
+          rm -f package-lock.json
+          npm install --no-package-lock --include=optional
 
       - name: Build
         run: npm run build
