@@ -82,7 +82,7 @@ const App: React.FC = () => {
   });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // EFECTO DE INICIALIZACIÃ“N: Ãšnico punto de entrada
+  // EFECTO DE INICIALIZACION: Unico punto de entrada
   useEffect(() => {
     let isMounted = true;
     
@@ -105,7 +105,7 @@ const App: React.FC = () => {
         setTramites(data || []);
       } catch (e: any) {
         console.error("Critical App Crash:", e);
-        if (isMounted) setError(e.message || "Fallo en la conexiÃ³n institucional.");
+        if (isMounted) setError(e.message || "Fallo en la conexion institucional.");
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -212,7 +212,7 @@ const App: React.FC = () => {
   }, [tramites]);
 
   const chartData = [
-    { name: 'RevisiÃ³n', value: stats.pendientes },
+    { name: 'Revision', value: stats.pendientes },
     { name: 'Autorizados', value: stats.autorizados },
     { name: 'Entregados', value: stats.entregados },
     { name: 'Rechazados', value: stats.rechazados }
@@ -244,7 +244,7 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
     setUserMenuOpen(false);
     setShowChangePasswordModal(false);
-    setUiMessage('SesiÃ³n cerrada correctamente.');
+    setUiMessage('Sesion cerrada correctamente.');
   };
 
   const gastoMetrics = useMemo(() => {
@@ -289,8 +289,8 @@ const App: React.FC = () => {
       await dbService.addBitacora({
         tramiteId: newId,
         usuario: user.nombre,
-        accion: 'CREACIÃ“N CLOUD',
-        descripcion: `TrÃ¡mite ${newTramite.folio} creado exitosamente.`
+        accion: 'CREACION CLOUD',
+        descripcion: `Tramite ${newTramite.folio} creado exitosamente.`
       });
       await loadData();
       setActiveTab('tramites');
@@ -299,7 +299,7 @@ const App: React.FC = () => {
         forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
         return;
       }
-      setUiMessage(e?.message || 'No fue posible guardar el trÃ¡mite.');
+      setUiMessage(e?.message || 'No fue posible guardar el tramite.');
     } finally {
       setLoading(false);
     }
@@ -319,7 +319,7 @@ const App: React.FC = () => {
         updateData.importeAutorizado = Number(importeAutorizado || 0);
         updateData.validadoPor = user.nombre;
         updateData.fechaValidacionImporte = new Date().toISOString();
-        updateData.firmaAutorizacion = `AUTORIZADO ELECTRÃ“NICAMENTE POR ${user.nombre}`;
+        updateData.firmaAutorizacion = `AUTORIZADO ELECTRONICAMENTE POR ${user.nombre}`;
         updateData.nombreAutorizador = user.nombre;
       }
 
@@ -352,9 +352,9 @@ const App: React.FC = () => {
       let motivoReimpresion: string | undefined;
 
       if (esReimpresion) {
-        const motivo = window.prompt('Este documento ya fue impreso. Captura el motivo de reimpresiÃ³n (obligatorio):', '');
+        const motivo = window.prompt('Este documento ya fue impreso. Captura el motivo de reimpresion (obligatorio):', '');
         if (!motivo || !motivo.trim()) {
-          alert('La reimpresiÃ³n requiere motivo obligatorio.');
+          alert('La reimpresion requiere motivo obligatorio.');
           return;
         }
         motivoReimpresion = motivo.trim();
@@ -396,7 +396,7 @@ const App: React.FC = () => {
         forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
         return;
       }
-      setUiMessage('No fue posible registrar la impresiÃ³n en bitÃ¡cora.');
+      setUiMessage('No fue posible registrar la impresion en bitacora.');
     } finally {
       setLoading(false);
     }
@@ -408,7 +408,7 @@ const App: React.FC = () => {
       <div className="h-screen flex flex-col items-center justify-center bg-imss-dark text-white">
         <Loader2 className="animate-spin mb-6 text-imss-gold" size={64} />
         <h2 className="text-2xl font-black uppercase tracking-[0.3em] animate-pulse">SISTRA Cloud</h2>
-        <p className="text-imss-gold/60 mt-4 font-bold text-xs">INICIALIZANDO SESIÃ“N SEGURA...</p>
+        <p className="text-imss-gold/60 mt-4 font-bold text-xs">INICIALIZANDO SESION SEGURA...</p>
       </div>
     );
   }
@@ -418,7 +418,7 @@ const App: React.FC = () => {
       <div className="h-screen flex items-center justify-center bg-slate-50 p-6">
         <div className="bg-white p-12 rounded-[40px] shadow-2xl max-w-lg border border-red-100 text-center">
           <AlertTriangle className="text-red-500 mx-auto mb-6" size={64} />
-          <h2 className="text-2xl font-black text-slate-800 uppercase mb-4">Error de SincronizaciÃ³n</h2>
+          <h2 className="text-2xl font-black text-slate-800 uppercase mb-4">Error de Sincronizacion</h2>
           <p className="text-slate-600 mb-8">{error}</p>
           <button onClick={() => window.location.reload()} className="w-full py-4 bg-imss text-white font-black uppercase rounded-2xl">Reintentar</button>
         </div>
@@ -430,7 +430,7 @@ const App: React.FC = () => {
     return <LoginView onLogin={handleLogin} loading={loading} error={error} infoMessage={uiMessage} />;
   }
 
-  // VISTA DE IMPRESIÃ“N (Separada del flujo principal para evitar fugas de memoria)
+  // VISTA DE IMPRESION (Separada del flujo principal para evitar fugas de memoria)
   if (printConfig.show && selectedTramite) {
     return (
       <div className="bg-white p-0">
@@ -476,7 +476,7 @@ const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 mt-4">
                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-               <p className="text-[10px] text-emerald-400 uppercase font-black tracking-widest">En LÃ­nea (v2.7)</p>
+               <p className="text-[10px] text-emerald-400 uppercase font-black tracking-widest">En Linea (v2.7)</p>
             </div>
           </div>
 
@@ -512,9 +512,9 @@ const App: React.FC = () => {
               <h2 className="text-base lg:text-xl font-black text-slate-800 flex items-center gap-3 uppercase tracking-tight">
                 <span className="w-1.5 h-8 bg-imss rounded-full"></span>
                 {activeTab === 'dashboard' && 'Resumen Institucional'}
-                {activeTab === 'tramites' && 'GestiÃ³n de TrÃ¡mites'}
-                {activeTab === 'nuevo' && 'Solicitud de DotaciÃ³n'}
-                {activeTab === 'central' && 'GestiÃ³n de TrÃ¡mites'}
+                {activeTab === 'tramites' && 'Gestion de Tramites'}
+                {activeTab === 'nuevo' && 'Solicitud de Dotacion'}
+                {activeTab === 'central' && 'Gestion de Tramites'}
               </h2>
             </div>
             
@@ -536,7 +536,7 @@ const App: React.FC = () => {
                 <button
                   className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
                   onClick={() => setUserMenuOpen((prev) => !prev)}
-                  aria-label="Abrir menÃº de usuario"
+                  aria-label="Abrir menu de usuario"
                 >
                   <div className="w-8 h-8 rounded-full bg-imss text-white text-xs font-black flex items-center justify-center">
                     {user?.nombre?.charAt(0)}
@@ -554,13 +554,13 @@ const App: React.FC = () => {
                         setUserMenuOpen(false);
                       }}
                     >
-                      <KeyRound size={16} /> Cambiar contraseÃ±a
+                      <KeyRound size={16} /> Cambiar contrasena
                     </button>
                     <button
                       className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-red-50 text-red-600 flex items-center gap-2"
                       onClick={handleLogout}
                     >
-                      <LogOut size={16} /> Cerrar sesiÃ³n
+                      <LogOut size={16} /> Cerrar sesion
                     </button>
                   </div>
                 )}
@@ -586,7 +586,7 @@ const App: React.FC = () => {
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
             {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} /> : <AccessDeniedView />)}
-            {/* central view removida por operaciÃ³n */}
+            {/* central view removida por operacion */}
             {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} /> : <AccessDeniedView />)}
           </div>
         </main>
@@ -596,7 +596,7 @@ const App: React.FC = () => {
             onClose={() => setShowChangePasswordModal(false)}
             onSuccess={(message) => {
               setShowChangePasswordModal(false);
-              forceLogoutWithMessage(`${message} Por seguridad inicia sesiÃ³n nuevamente.`);
+              forceLogoutWithMessage(`${message} Por seguridad inicia sesion nuevamente.`);
             }}
             onAuthFailure={(message) => {
               forceLogoutWithMessage(message);
@@ -706,7 +706,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
         {feedback && <p className="mb-3 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg px-3 py-2">{feedback}</p>}
         <div className="space-y-3">
           <input className="w-full p-3 border rounded-xl" placeholder="Nombre" value={nombre} onChange={(e)=>setNombre(e.target.value)} />
-          <input className="w-full p-3 border rounded-xl" placeholder="MatrÃ­cula" inputMode="numeric" pattern="[0-9]*" value={matricula} onChange={(e)=>setMatricula(e.target.value.replace(/\D/g, ''))} />
+          <input className="w-full p-3 border rounded-xl" placeholder="Matricula" inputMode="numeric" pattern="[0-9]*" value={matricula} onChange={(e)=>setMatricula(e.target.value.replace(/\D/g, ''))} />
           <input className="w-full p-3 border rounded-xl" placeholder="Unidad" value={unidad} onChange={(e)=>setUnidad(e.target.value)} />
           <input className="w-full p-3 border rounded-xl" placeholder="OOAD" value={ooad} onChange={(e)=>setOoad(e.target.value)} />
           <select className="w-full p-3 border rounded-xl bg-white" value={role} onChange={(e)=>setRole(e.target.value as Role)}>
@@ -715,12 +715,12 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
             ))}
           </select>
           <div className="relative">
-            <input type={showPassword ? 'text' : 'password'} className="w-full p-3 border rounded-xl pr-10" placeholder="ContraseÃ±a inicial" value={password} onChange={(e)=>setPassword(e.target.value)} />
+            <input type={showPassword ? 'text' : 'password'} className="w-full p-3 border rounded-xl pr-10" placeholder="Contrasena inicial" value={password} onChange={(e)=>setPassword(e.target.value)} />
             <button
               type="button"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
               onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={showPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'}
+              aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -745,14 +745,14 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
         <div className="space-y-3 max-h-[500px] overflow-auto">
           {usuarios.map((u) => (
             <div key={u.id} className="border rounded-xl p-3">
-              <p className="font-black text-sm">{u.nombre} Â· {u.matricula}</p>
-              <p className="text-xs text-slate-500">{u.role} Â· {u.unidad} Â· {u.activo ? 'ACTIVO' : 'INACTIVO'}</p>
+              <p className="font-black text-sm">{u.nombre} · {u.matricula}</p>
+              <p className="text-xs text-slate-500">{u.role} · {u.unidad} · {u.activo ? 'ACTIVO' : 'INACTIVO'}</p>
               <div className="mt-2 flex gap-2">
                 <div className="relative flex-1">
                   <input
                     type={showResetPasswordByUser[u.id] ? 'text' : 'password'}
                     className="w-full p-2 border rounded-lg pr-9"
-                    placeholder="Nueva contraseÃ±a"
+                    placeholder="Nueva contrasena"
                     value={resetPasswordByUser[u.id] || ''}
                     onChange={(e)=>setResetPasswordByUser(prev => ({ ...prev, [u.id]: e.target.value }))}
                   />
@@ -760,7 +760,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
                     type="button"
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
                     onClick={() => setShowResetPasswordByUser(prev => ({ ...prev, [u.id]: !prev[u.id] }))}
-                    aria-label={showResetPasswordByUser[u.id] ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'}
+                    aria-label={showResetPasswordByUser[u.id] ? 'Ocultar contrasena' : 'Mostrar contrasena'}
                   >
                     {showResetPasswordByUser[u.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -777,7 +777,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
                     setResetPasswordByUser(prev => ({ ...prev, [u.id]: '' }));
                     setFeedback(`Correo de restablecimiento enviado para ${u.matricula}.`);
                   }
-                  catch(e:any){ setFeedback(e?.message || 'No se pudo resetear la contraseÃ±a.'); }
+                  catch(e:any){ setFeedback(e?.message || 'No se pudo resetear la contrasena.'); }
                 }}>Reset</button>
               </div>
             </div>
@@ -791,7 +791,7 @@ const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
 const AccessDeniedView = () => (
   <div className="bg-white rounded-3xl border border-red-100 p-10 text-center">
     <AlertTriangle className="mx-auto text-red-500 mb-4" />
-    <p className="font-black text-slate-700 uppercase text-sm">No tienes permisos para ver esta secciÃ³n.</p>
+    <p className="font-black text-slate-700 uppercase text-sm">No tienes permisos para ver esta seccion.</p>
     <p className="text-xs text-slate-500 mt-2">Si consideras que es un error, contacta al administrador del sistema.</p>
   </div>
 );
@@ -849,10 +849,10 @@ const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUp
     
     <div className="bg-white p-12 rounded-[50px] border border-slate-100 shadow-sm min-h-[500px] flex flex-col">
        <div className="flex items-center justify-between mb-12">
-          <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Indicadores de GestiÃ³n Nacional</h3>
+          <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Indicadores de Gestion Nacional</h3>
           <div className="flex items-center gap-3">
              <div className="w-3 h-3 bg-imss rounded-full"></div>
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TrÃ¡mites Activos</span>
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tramites Activos</span>
           </div>
        </div>
        <div className="flex-1">
@@ -909,13 +909,13 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
   <div className="institutional-card rounded-[28px] lg:rounded-[50px] overflow-hidden animate-in slide-in-from-bottom-6 duration-500" aria-live="polite">
     <div className="mobile-scroll-x">
     <table className="w-full min-w-[760px] text-left border-collapse">
-      <caption className="sr-only">Bandeja de trÃ¡mites</caption>
+      <caption className="sr-only">Bandeja de tramites</caption>
       <thead className="bg-imss-dark">
         <tr>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Identificador</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Solicitante</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-center">Estatus Cloud</th>
-          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">AcciÃ³n</th>
+          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">Accion</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-50">
@@ -983,7 +983,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-imss-dark/80 backdrop-blur-xl z-50 flex items-center justify-center p-2 lg:p-8 animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-label={`Detalle del trÃ¡mite ${tramite.folio}`}>
+    <div className="fixed inset-0 bg-imss-dark/80 backdrop-blur-xl z-50 flex items-center justify-center p-2 lg:p-8 animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-label={`Detalle del tramite ${tramite.folio}`}>
        <div className="bg-white rounded-3xl lg:rounded-[60px] w-full max-w-6xl h-[96vh] lg:h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
           <div className="px-4 py-4 lg:px-12 lg:py-10 bg-imss-dark text-white flex flex-col lg:flex-row justify-between lg:items-center shrink-0 border-b border-imss-gold/20 gap-3">
              <div>
@@ -1009,18 +1009,18 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
           </div>
 
           <div className="mobile-scroll-x flex border-b border-slate-100 bg-slate-50 px-2 lg:px-12">
-             <TabButton label="InformaciÃ³n General" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
+             <TabButton label="Informacion General" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
              <TabButton label="Historial Institucional" active={activeTab === 'tarjeta'} onClick={() => setActiveTab('tarjeta')} />
-             <TabButton label="BitÃ¡cora Cloud" active={activeTab === 'bitacora'} onClick={() => setActiveTab('bitacora')} />
+             <TabButton label="Bitacora Cloud" active={activeTab === 'bitacora'} onClick={() => setActiveTab('bitacora')} />
           </div>
 
           <div className="flex-1 overflow-auto p-4 lg:p-12 bg-white">
-            {/* impresiÃ³n/reimpresiÃ³n habilitada desde captura completada */}
+            {/* impresion/reimpresion habilitada desde captura completada */}
             {activeTab === 'info' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
                 <div className="space-y-10">
                   <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 shadow-inner">
-                    <h4 className="text-[11px] font-black text-slate-400 uppercase mb-8 tracking-[0.2em]">CÃ©dula del Beneficiario</h4>
+                    <h4 className="text-[11px] font-black text-slate-400 uppercase mb-8 tracking-[0.2em]">Cedula del Beneficiario</h4>
                     <div className="grid grid-cols-1 gap-8">
                       <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Nombre del Solicitante</p><p className="font-black text-slate-800 text-xl uppercase leading-tight">{tramite.beneficiario?.nombre} {tramite.beneficiario?.apellidoPaterno}</p></div>
                       <div className="grid grid-cols-2 gap-6">
@@ -1032,7 +1032,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                 </div>
                 <div className="space-y-10">
                    <div className="p-10 bg-imss-light/30 rounded-[40px] border border-imss/10 space-y-6">
-                    <h4 className="text-[11px] font-black text-imss/50 uppercase tracking-[0.2em]">ValidaciÃ³n documental en unidad</h4>
+                    <h4 className="text-[11px] font-black text-imss/50 uppercase tracking-[0.2em]">Validacion documental en unidad</h4>
                     <div className="bg-white rounded-2xl p-5 border border-slate-100">
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Documentos requeridos al usuario</p>
                       <ul className="text-xs font-semibold text-slate-700 space-y-2">
@@ -1061,11 +1061,11 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                       </div>
                       <p className="text-sm text-slate-600 font-medium leading-relaxed mb-2">{b.descripcion}</p>
                       {b.categoria && (
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">CategorÃ­a: {b.categoria}</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Categoria: {b.categoria}</p>
                       )}
                       {b.datos?.folio && (
                         <p className="text-[10px] font-bold text-slate-500 mb-4">
-                          Folio: {b.datos.folio} Â· EmisiÃ³n: {b.datos.emision || 'N/A'} Â· Documento: {b.datos.documento || 'N/A'}
+                          Folio: {b.datos.folio} · Emision: {b.datos.emision || 'N/A'} · Documento: {b.datos.documento || 'N/A'}
                         </p>
                       )}
                       <div className="pt-4 border-t border-slate-200 flex items-center gap-2">
@@ -1075,7 +1075,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                    </div>
                  )) : (
                    <div className="text-center py-32 bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-100">
-                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] opacity-40">BitÃ¡cora en blanco</p>
+                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] opacity-40">Bitacora en blanco</p>
                    </div>
                  )}
               </div>
@@ -1133,36 +1133,36 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
     setFeedback(null);
 
     if (!currentPassword.trim()) {
-      setFeedback('Captura tu contraseÃ±a actual para continuar.');
+      setFeedback('Captura tu contrasena actual para continuar.');
       return;
     }
 
     if (strengthIssues.length > 0) {
-      setFeedback(`La nueva contraseÃ±a no cumple la polÃ­tica: ${strengthIssues.join(' ')}`);
+      setFeedback(`La nueva contrasena no cumple la politica: ${strengthIssues.join(' ')}`);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setFeedback('La confirmaciÃ³n no coincide con la nueva contraseÃ±a.');
+      setFeedback('La confirmacion no coincide con la nueva contrasena.');
       return;
     }
 
     if (currentPassword === newPassword) {
-      setFeedback('La nueva contraseÃ±a debe ser diferente a la actual.');
+      setFeedback('La nueva contrasena debe ser diferente a la actual.');
       return;
     }
 
     setSubmitting(true);
     try {
       await changeOwnPassword(currentPassword, newPassword);
-      onSuccess('ContraseÃ±a actualizada correctamente. Usa la nueva contraseÃ±a en tu prÃ³ximo inicio de sesiÃ³n.');
+      onSuccess('Contrasena actualizada correctamente. Usa la nueva contrasena en tu proximo inicio de sesion.');
     } catch (error: any) {
       if (error instanceof AuthError && (error.code === 'INVALID_CREDENTIALS' || error.code === 'INVALID_SESSION')) {
-        onAuthFailure('No fue posible reautenticar tu identidad. Por seguridad se cerrÃ³ tu sesiÃ³n. Inicia de nuevo.');
+        onAuthFailure('No fue posible reautenticar tu identidad. Por seguridad se cerro tu sesion. Inicia de nuevo.');
         return;
       }
 
-      setFeedback(error?.message || 'No se pudo cambiar la contraseÃ±a. Intenta de nuevo.');
+      setFeedback(error?.message || 'No se pudo cambiar la contrasena. Intenta de nuevo.');
     } finally {
       setSubmitting(false);
     }
@@ -1172,46 +1172,46 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
     <div className="fixed inset-0 z-40 bg-slate-900/40 flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Cambiar contraseÃ±a</h3>
+          <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Cambiar contrasena</h3>
           <button className="text-xs font-bold uppercase text-slate-500 hover:text-slate-800" onClick={onClose} disabled={submitting}>Cerrar</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="field-label">ContraseÃ±a actual</label>
+            <label className="field-label">Contrasena actual</label>
             <div className="relative">
               <input type={showCurrentPassword ? 'text' : 'password'} className="field-input pr-12" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowCurrentPassword((prev) => !prev)} aria-label={showCurrentPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'}>
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowCurrentPassword((prev) => !prev)} aria-label={showCurrentPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}>
                 {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
           <div>
-            <label className="field-label">Nueva contraseÃ±a</label>
+            <label className="field-label">Nueva contrasena</label>
             <div className="relative">
               <input type={showNewPassword ? 'text' : 'password'} className="field-input pr-12" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowNewPassword((prev) => !prev)} aria-label={showNewPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'}>
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowNewPassword((prev) => !prev)} aria-label={showNewPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}>
                 {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             <ul className="mt-2 space-y-1 text-[11px]">
               {[
-                { ok: newPassword.length >= 10, text: 'MÃ­nimo 10 caracteres' },
-                { ok: /[A-Z]/.test(newPassword), text: 'Al menos una mayÃºscula' },
-                { ok: /[a-z]/.test(newPassword), text: 'Al menos una minÃºscula' },
-                { ok: /\d/.test(newPassword), text: 'Al menos un nÃºmero' },
-                { ok: /[^A-Za-z0-9]/.test(newPassword), text: 'Al menos un carÃ¡cter especial' }
+                { ok: newPassword.length >= 10, text: 'Minimo 10 caracteres' },
+                { ok: /[A-Z]/.test(newPassword), text: 'Al menos una mayuscula' },
+                { ok: /[a-z]/.test(newPassword), text: 'Al menos una minuscula' },
+                { ok: /\d/.test(newPassword), text: 'Al menos un numero' },
+                { ok: /[^A-Za-z0-9]/.test(newPassword), text: 'Al menos un caracter especial' }
               ].map((rule) => (
                 <li key={rule.text} className={rule.ok ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>
-                  {rule.ok ? 'âœ“' : 'â€¢'} {rule.text}
+                  {rule.ok ? 'OK' : '-'} {rule.text}
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <label className="field-label">Confirmar nueva contraseÃ±a</label>
+            <label className="field-label">Confirmar nueva contrasena</label>
             <div className="relative">
               <input type={showConfirmPassword ? 'text' : 'password'} className="field-input pr-12" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowConfirmPassword((prev) => !prev)} aria-label={showConfirmPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'}>
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss" onClick={() => setShowConfirmPassword((prev) => !prev)} aria-label={showConfirmPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}>
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -1222,7 +1222,7 @@ const ChangePasswordModal = ({ onClose, onSuccess, onAuthFailure }: {
           <div className="pt-2 flex items-center justify-end gap-3">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" disabled={submitting}>Cancelar</button>
             <button type="submit" className="px-5 py-2 rounded-xl bg-imss text-white text-sm font-black disabled:opacity-50" disabled={submitting}>
-              {submitting ? 'Actualizando...' : 'Guardar contraseÃ±a'}
+              {submitting ? 'Actualizando...' : 'Guardar contrasena'}
             </button>
           </div>
         </form>
@@ -1284,21 +1284,21 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
 
     if (!beneficiario.apellidoPaterno?.trim()) return 'Captura apellido paterno del beneficiario.';
     if (!beneficiario.apellidoMaterno?.trim()) return 'Captura apellido materno del beneficiario.';
-    if (!beneficiario.entidadLaboral?.trim()) return 'Captura la unidad o adscripción laboral.';
+    if (!beneficiario.entidadLaboral?.trim()) return 'Captura la unidad o adscripcion laboral.';
 
     if (beneficiario.tipo === TipoBeneficiario.TRABAJADOR || beneficiario.tipo === TipoBeneficiario.JUBILADO_PENSIONADO) {
-      if (!beneficiario.matricula?.trim()) return 'Captura la matrícula para trabajador o jubilado/pensionado.';
-      if (!beneficiario.claveAdscripcion?.trim()) return 'Captura la clave de adscripción.';
-      if (!beneficiario.tipoContratacion?.trim()) return 'Selecciona tipo de contratación.';
+      if (!beneficiario.matricula?.trim()) return 'Captura la matricula para trabajador o jubilado/pensionado.';
+      if (!beneficiario.claveAdscripcion?.trim()) return 'Captura la clave de adscripcion.';
+      if (!beneficiario.tipoContratacion?.trim()) return 'Selecciona tipo de contratacion.';
     }
 
     if (beneficiario.tipo === TipoBeneficiario.HIJO) {
       if (!beneficiario.titularNombreCompleto?.trim()) return 'Captura nombre completo de la persona trabajadora titular.';
-      if (!beneficiario.nssHijo?.trim() || !/^\d{10,11}$/.test(beneficiario.nssHijo.trim())) return 'El NSS de hija/hijo debe tener 10 u 11 dígitos.';
+      if (!beneficiario.nssHijo?.trim() || !/^\d{10,11}$/.test(beneficiario.nssHijo.trim())) return 'El NSS de hija/hijo debe tener 10 u 11 digitos.';
       if (!beneficiario.fechaNacimiento) return 'Captura fecha de nacimiento de hija/hijo.';
       if (requiereConstanciaEstudios) {
-        if (!beneficiario.constanciaEstudiosVigente) return 'Marca constancia de estudios vigente para hija/hijo (16 años o más).';
-        if (!beneficiario.fechaConstanciaEstudios) return 'Captura fecha de emisión de constancia de estudios.';
+        if (!beneficiario.constanciaEstudiosVigente) return 'Marca constancia de estudios vigente para hija/hijo (16 anos o mas).';
+        if (!beneficiario.fechaConstanciaEstudios) return 'Captura fecha de emision de constancia de estudios.';
       }
     }
 
@@ -1369,7 +1369,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               {step > s ? <CheckCircle2 size={28} /> : s}
             </div>
             <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${step === s ? 'text-white' : 'text-white/20'}`}>
-              {s === 1 ? 'Solicitante' : s === 2 ? 'Médico' : 'Finalizar'}
+              {s === 1 ? 'Solicitante' : s === 2 ? 'Medico' : 'Finalizar'}
             </span>
           </div>
         ))}
@@ -1397,7 +1397,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Unidad / adscripción</label>
+                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Unidad / adscripcion</label>
                 <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                   value={beneficiario.entidadLaboral}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, entidadLaboral: e.target.value }); }} />
@@ -1458,19 +1458,19 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               {(beneficiario.tipo === TipoBeneficiario.TRABAJADOR || beneficiario.tipo === TipoBeneficiario.JUBILADO_PENSIONADO) && (
                 <>
                   <div>
-                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Matrícula</label>
+                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Matricula</label>
                     <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.matricula}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: e.target.value }); }} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave adscripción</label>
+                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave adscripcion</label>
                     <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Tipo de contratación</label>
+                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Tipo de contratacion</label>
                     <select className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.tipoContratacion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, tipoContratacion: e.target.value }); }}>
@@ -1483,11 +1483,11 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
 
               {beneficiario.tipo === TipoBeneficiario.HIJO && requiereConstanciaEstudios && (
                 <div className="md:col-span-2 p-6 rounded-3xl bg-amber-50 border border-amber-200">
-                  <p className="text-[11px] font-black text-amber-800 uppercase tracking-widest mb-3">Constancia de estudios requerida (16+ años)</p>
+                  <p className="text-[11px] font-black text-amber-800 uppercase tracking-widest mb-3">Constancia de estudios requerida (16+ anos)</p>
                   <div className="flex items-center gap-3 mb-3">
                     <input type="checkbox" checked={Boolean(beneficiario.constanciaEstudiosVigente)}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, constanciaEstudiosVigente: e.target.checked }); }} />
-                    <span className="text-sm font-bold text-slate-700">Se presentó constancia de estudios vigente</span>
+                    <span className="text-sm font-bold text-slate-700">Se presento constancia de estudios vigente</span>
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-500 uppercase mb-2 tracking-widest">Fecha constancia</label>
@@ -1495,7 +1495,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
                       value={beneficiario.fechaConstanciaEstudios}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, fechaConstanciaEstudios: e.target.value }); }} />
                   </div>
-                  <p className="mt-2 text-[11px] font-semibold text-slate-500">Vigencia máxima de referencia: {VIGENCIA_CONSTANCIA_ESTUDIOS_MESES} meses.</p>
+                  <p className="mt-2 text-[11px] font-semibold text-slate-500">Vigencia maxima de referencia: {VIGENCIA_CONSTANCIA_ESTUDIOS_MESES} meses.</p>
                 </div>
               )}
             </div>
@@ -1509,11 +1509,11 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               <input placeholder="FOLIO RECETA" aria-label="Folio de receta" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.folio} onChange={(e) => { setStepError(''); setReceta({ ...receta, folio: e.target.value }); }} />
             </div>
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Diagnóstico y Especificación</label>
-              <textarea placeholder="DESCRIBA LA GRADUACIÓN..." aria-label="Diagnóstico y especificación" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => { setStepError(''); setReceta({ ...receta, descripcion: e.target.value }); }} />
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Diagnostico y Especificacion</label>
+              <textarea placeholder="DESCRIBA LA GRADUACION..." aria-label="Diagnostico y especificacion" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => { setStepError(''); setReceta({ ...receta, descripcion: e.target.value }); }} />
             </div>
             <div className="flex gap-6">
-              <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
+              <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atras</button>
               <button onClick={() => goToStep(3)} className="flex-1 py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>
             </div>
           </div>
@@ -1523,8 +1523,8 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
             <div className="w-28 h-28 bg-imss-light rounded-full flex items-center justify-center mx-auto mb-10 shadow-inner">
               <ShieldCheck className="text-imss" size={56} />
             </div>
-            <h3 className="text-4xl font-black text-slate-800 uppercase mb-6 tracking-tighter">Validación de Registro</h3>
-            <p className="text-slate-500 mb-14 max-w-md mx-auto font-medium leading-relaxed uppercase text-xs tracking-widest">La solicitud será firmada digitalmente y sincronizada con el servidor central de prestaciones.</p>
+            <h3 className="text-4xl font-black text-slate-800 uppercase mb-6 tracking-tighter">Validacion de Registro</h3>
+            <p className="text-slate-500 mb-14 max-w-md mx-auto font-medium leading-relaxed uppercase text-xs tracking-widest">La solicitud sera firmada digitalmente y sincronizada con el servidor central de prestaciones.</p>
             <div className="flex gap-6">
               <button onClick={() => goToStep(2)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
               <button onClick={handleFinalize} className="flex-1 py-7 bg-imss-dark text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition-all">Sincronizar Solicitud</button>
@@ -1540,7 +1540,7 @@ const CentralView = ({ tramites }: any) => (
      <div className="bg-imss-dark p-16 rounded-[60px] shadow-2xl flex justify-between items-center border-b-8 border-imss-gold/30">
         <div>
            <h3 className="text-4xl font-black text-white uppercase tracking-tighter">Consolidado Nacional</h3>
-           <p className="text-imss-gold font-black text-xs uppercase tracking-[0.4em] mt-3">GestiÃ³n de AuditorÃ­a y Control Fiscal</p>
+           <p className="text-imss-gold font-black text-xs uppercase tracking-[0.4em] mt-3">Gestion de Auditoria y Control Fiscal</p>
         </div>
         <div className="bg-white/10 px-8 py-5 rounded-[24px] backdrop-blur-md border border-white/5">
            <p className="text-white font-black text-lg">{tramites.length} REGISTROS</p>

@@ -44,7 +44,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const authPersistenceReady = setPersistence(auth, browserSessionPersistence).catch((error) => {
-  console.warn('No se pudo establecer persistencia de sesión en navegador.', error);
+  console.warn('No se pudo establecer persistencia de sesion en navegador.', error);
 });
 
 const AUTH_EMAIL_DOMAIN = (import.meta as any).env?.VITE_AUTH_EMAIL_DOMAIN || 'sistra.local';
@@ -101,7 +101,7 @@ const bootstrapPrimaryAdminProfile = async (uid: string, matricula: string, emai
 
   const bootstrapUser: User = {
     id: uid,
-    nombre: 'Moisés Beltrán Castro',
+    nombre: 'Moises Beltran Castro',
     matricula: PRIMARY_ADMIN_MATRICULA,
     role: Role.ADMIN_SISTEMA,
     unidad: 'CENTRAL',
@@ -130,18 +130,18 @@ export const VALIDATION_RULES = {
 };
 
 export const UX_MESSAGES = {
-  SESSION_INVALID: 'Tu sesión expiró o ya no es válida. Inicia sesión nuevamente.',
+  SESSION_INVALID: 'Tu sesion expiro o ya no es valida. Inicia sesion nuevamente.',
   ACCESS_RESTRICTED: 'Acceso restringido para tu perfil.',
-  TAB_REDIRECTED: 'No tienes permisos para esa sección. Te redirigimos a una vista permitida.',
+  TAB_REDIRECTED: 'No tienes permisos para esa seccion. Te redirigimos a una vista permitida.',
   SYNC_ERROR: 'Error al sincronizar con la nube.',
-  LOGIN_GENERIC_ERROR: 'No fue posible iniciar sesión.',
-  LOGIN_REQUIRED: 'Captura matrícula y contraseña.',
-  LOGIN_PASSWORD_MIN: `La contraseña debe tener al menos ${VALIDATION_RULES.LOGIN_PASSWORD_MIN} caracteres.`,
+  LOGIN_GENERIC_ERROR: 'No fue posible iniciar sesion.',
+  LOGIN_REQUIRED: 'Captura matricula y contrasena.',
+  LOGIN_PASSWORD_MIN: `La contrasena debe tener al menos ${VALIDATION_RULES.LOGIN_PASSWORD_MIN} caracteres.`,
   UPDATE_STATUS_DENIED: 'Solo ADMIN_SISTEMA o AUTORIZADOR_JSDP_DSPNC pueden validar importes y autorizar.',
   CREATE_DENIED: 'Perfil de consulta sin permisos de captura.'
 };
 
-export const SESSION_INVALID_TOKENS = ['Sesión inválida', 'INVALID_SESSION'];
+export const SESSION_INVALID_TOKENS = ['Sesion invalida', 'INVALID_SESSION'];
 
 export const canAccessTabByRole = (role: Role, tab: AppTab): boolean => {
   return (TABS_BY_ROLE[role] || ['dashboard', 'tramites']).includes(tab);
@@ -158,14 +158,14 @@ export const validateLoginInput = (matricula: string, password: string): string 
 
 export const validateNuevoTramiteStep1 = (payload: { nombre?: string; nssTrabajador?: string }): string => {
   if (!payload.nombre?.trim()) return 'Captura el nombre del beneficiario.';
-  if (!VALIDATION_RULES.NSS_REGEX.test((payload.nssTrabajador || '').trim())) return 'El NSS debe tener 10 u 11 dígitos numéricos.';
+  if (!VALIDATION_RULES.NSS_REGEX.test((payload.nssTrabajador || '').trim())) return 'El NSS debe tener 10 u 11 digitos numericos.';
   return '';
 };
 
 export const validateNuevoTramiteStep2 = (payload: { folioRecetaImss?: string; descripcionLente?: string; importeSolicitado?: number }): string => {
   if (!payload.folioRecetaImss?.trim()) return 'Captura el folio de receta 1A14.';
   if (!payload.descripcionLente?.trim() || payload.descripcionLente.trim().length < VALIDATION_RULES.DIAGNOSTICO_MIN_CHARS) {
-    return `Describe el diagnóstico con al menos ${VALIDATION_RULES.DIAGNOSTICO_MIN_CHARS} caracteres.`;
+    return `Describe el diagnostico con al menos ${VALIDATION_RULES.DIAGNOSTICO_MIN_CHARS} caracteres.`;
   }
   return '';
 };
@@ -205,15 +205,15 @@ const clearSession = () => {
 export const validatePasswordStrength = (password: string): string[] => {
   const issues: string[] = [];
   if (!password || password.trim().length === 0) {
-    issues.push('La contraseña es obligatoria.');
+    issues.push('La contrasena es obligatoria.');
     return issues;
   }
 
   if (password.length < 10) issues.push('Debe contener al menos 10 caracteres.');
-  if (!/[A-Z]/.test(password)) issues.push('Debe incluir al menos una letra mayúscula.');
-  if (!/[a-z]/.test(password)) issues.push('Debe incluir al menos una letra minúscula.');
-  if (!/\d/.test(password)) issues.push('Debe incluir al menos un número.');
-  if (!/[^A-Za-z0-9]/.test(password)) issues.push('Debe incluir al menos un carácter especial.');
+  if (!/[A-Z]/.test(password)) issues.push('Debe incluir al menos una letra mayuscula.');
+  if (!/[a-z]/.test(password)) issues.push('Debe incluir al menos una letra minuscula.');
+  if (!/\d/.test(password)) issues.push('Debe incluir al menos un numero.');
+  if (!/[^A-Za-z0-9]/.test(password)) issues.push('Debe incluir al menos un caracter especial.');
 
   return issues;
 };
@@ -319,14 +319,14 @@ export const loginWithMatricula = async (matricula: string, password: string): P
 
         if (!userDoc.exists()) {
           await signOut(auth);
-          throw new AuthError('INVALID_SESSION', 'Tu cuenta no está mapeada en usuarios/{uid}.');
+          throw new AuthError('INVALID_SESSION', 'Tu cuenta no esta mapeada en usuarios/{uid}.');
         }
 
         const user = { id: cred.user.uid, ...(userDoc.data() as Omit<User, 'id'>) } as User;
 
         if (!user.activo) {
           await signOut(auth);
-          throw new AuthError('INACTIVE_USER', 'Tu cuenta está inactiva. Contacta al administrador.');
+          throw new AuthError('INACTIVE_USER', 'Tu cuenta esta inactiva. Contacta al administrador.');
         }
 
         currentUserProfile = user;
@@ -344,17 +344,17 @@ export const loginWithMatricula = async (matricula: string, password: string): P
 
     const finalCode = lastAuthError?.code || '';
     if (finalCode === 'auth/invalid-credential' || finalCode === 'auth/user-not-found' || finalCode === 'auth/wrong-password') {
-      throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
+      throw new AuthError('INVALID_CREDENTIALS', 'Matricula o contrasena incorrecta.');
     }
 
-    throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
+    throw new AuthError('INVALID_CREDENTIALS', 'Matricula o contrasena incorrecta.');
   } catch (error: any) {
     if (error instanceof AuthError) throw error;
     const code = error?.code || '';
     if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
-      throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
+      throw new AuthError('INVALID_CREDENTIALS', 'Matricula o contrasena incorrecta.');
     }
-    throw new AuthError('INVALID_CREDENTIALS', 'Matrícula o contraseña incorrecta.');
+    throw new AuthError('INVALID_CREDENTIALS', 'Matricula o contrasena incorrecta.');
   }
 };
 
@@ -371,13 +371,13 @@ export const adminCreateCapturista = async (
 
   const weakPasswordIssues = validatePasswordStrength(payload.password);
   if (weakPasswordIssues.length > 0) {
-    throw new AuthError('WEAK_PASSWORD', `Contraseña insegura: ${weakPasswordIssues.join(' ')}`);
+    throw new AuthError('WEAK_PASSWORD', `Contrasena insegura: ${weakPasswordIssues.join(' ')}`);
   }
 
   const matricula = normalizeMatricula(payload.matricula);
   const existsQ = query(collection(db, 'usuarios'), where('matricula', '==', matricula), limit(1));
   const exists = await getDocs(existsQ);
-  if (!exists.empty) throw new Error('La matrícula ya está registrada.');
+  if (!exists.empty) throw new Error('La matricula ya esta registrada.');
 
   const creatorAuth = await getCreatorAuth();
   const email = matriculaToEmail(matricula);
@@ -404,7 +404,7 @@ export const adminResetPassword = async (
   userId: string,
   _newPassword: string
 ): Promise<void> => {
-  if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede resetear contraseñas.');
+  if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede resetear contrasenas.');
 
   const userDoc = await getDoc(doc(db, 'usuarios', userId));
   if (!userDoc.exists()) throw new Error('Usuario no encontrado.');
@@ -421,17 +421,17 @@ export const changeOwnPassword = async (
   const firebaseUser = auth.currentUser;
   if (!firebaseUser) {
     clearSession();
-    throw new AuthError('INVALID_SESSION', 'Sesión inválida. Inicia sesión nuevamente.');
+    throw new AuthError('INVALID_SESSION', 'Sesion invalida. Inicia sesion nuevamente.');
   }
 
   const strengthIssues = validatePasswordStrength(newPassword);
   if (strengthIssues.length > 0) {
-    throw new AuthError('WEAK_PASSWORD', `La nueva contraseña no cumple la política: ${strengthIssues.join(' ')}`);
+    throw new AuthError('WEAK_PASSWORD', `La nueva contrasena no cumple la politica: ${strengthIssues.join(' ')}`);
   }
 
   const email = firebaseUser.email;
   if (!email) {
-    throw new AuthError('INVALID_SESSION', 'No fue posible validar tu cuenta. Inicia sesión nuevamente.');
+    throw new AuthError('INVALID_SESSION', 'No fue posible validar tu cuenta. Inicia sesion nuevamente.');
   }
 
   try {
@@ -442,19 +442,19 @@ export const changeOwnPassword = async (
     const code = String(error?.code || '');
 
     if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
-      throw new AuthError('INVALID_CREDENTIALS', 'La contraseña actual es incorrecta.');
+      throw new AuthError('INVALID_CREDENTIALS', 'La contrasena actual es incorrecta.');
     }
 
     if (code === 'auth/too-many-requests') {
-      throw new AuthError('INVALID_CREDENTIALS', 'Demasiados intentos fallidos. Inicia sesión nuevamente.');
+      throw new AuthError('INVALID_CREDENTIALS', 'Demasiados intentos fallidos. Inicia sesion nuevamente.');
     }
 
     if (code === 'auth/requires-recent-login' || code === 'auth/user-token-expired') {
       clearSession();
-      throw new AuthError('INVALID_SESSION', 'Tu sesión expiró. Inicia sesión nuevamente.');
+      throw new AuthError('INVALID_SESSION', 'Tu sesion expiro. Inicia sesion nuevamente.');
     }
 
-    throw new Error('No se pudo actualizar la contraseña. Intenta nuevamente.');
+    throw new Error('No se pudo actualizar la contrasena. Intenta nuevamente.');
   }
 };
 
@@ -501,14 +501,14 @@ export const dbService = {
 
   async saveTramite(tramite: Partial<Tramite>): Promise<string> {
     const user = await ensureSession();
-    if (!user) throw new AuthError('INVALID_SESSION', 'Sesión inválida. Inicia sesión nuevamente.');
+    if (!user) throw new AuthError('INVALID_SESSION', 'Sesion invalida. Inicia sesion nuevamente.');
 
     try {
       if (tramite.id) {
         const docRef = doc(db, "tramites", tramite.id);
         const prevSnapshot = await getDoc(docRef);
         if (!prevSnapshot.exists()) {
-          throw new Error('El trámite no existe o fue eliminado.');
+          throw new Error('El tramite no existe o fue eliminado.');
         }
 
         const previo = prevSnapshot.data() as Tramite;
@@ -538,7 +538,7 @@ export const dbService = {
               tramiteId: tramite.id,
               usuario: user.nombre,
               accion: 'TRANSICION_RECHAZADA_WORKFLOW',
-              descripcion: validation.reason || 'Transición inválida.',
+              descripcion: validation.reason || 'Transicion invalida.',
               datos: {
                 from: previo.estatus,
                 to: tramite.estatus,
@@ -546,7 +546,7 @@ export const dbService = {
                 allowedNext: validation.allowedNext
               }
             });
-            throw new Error(validation.reason || 'Transición inválida.');
+            throw new Error(validation.reason || 'Transicion invalida.');
           }
         }
 
@@ -558,7 +558,7 @@ export const dbService = {
             tramiteId: tramite.id,
             usuario: user.nombre,
             accion: 'TRANSICION_APLICADA',
-            descripcion: `Transición de estatus aplicada: ${previo.estatus} -> ${tramite.estatus}.`,
+            descripcion: `Transicion de estatus aplicada: ${previo.estatus} -> ${tramite.estatus}.`,
             datos: {
               from: previo.estatus,
               to: tramite.estatus,
