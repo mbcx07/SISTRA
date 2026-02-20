@@ -1123,10 +1123,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                       <p className="text-sm font-black text-slate-800">{tramite.contratoColectivoAplicable || 'SIN CAPTURA'}</p>
                       <p className="text-[10px] text-slate-500 font-bold">Dotaciones registradas para este contrato: {historicalDotations.filter((d: Tramite) => String(d.contratoColectivoAplicable || '').trim().toUpperCase() === String(tramite.contratoColectivoAplicable || '').trim().toUpperCase()).length} de 2</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-5 border border-slate-100 space-y-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Medicion de anteojos</p>
-                      <p className="text-sm font-bold text-slate-800">{tramite.medicionAnteojos?.trim() ? tramite.medicionAnteojos : 'Sin medicion capturada. Se permite impresion para llenado manual.'}</p>
-                    </div>
+                    {/* medicion de anteojos no aplica en captura de unidad */}
                   </div>
                 </div>
               </div>
@@ -1222,7 +1219,7 @@ const EditCaptureModal = ({ tramite, onClose, onSave, loading }: {
     folioRecetaImss: tramite.folioRecetaImss || '',
     fechaExpedicionReceta: toDateInputValue(tramite.fechaExpedicionReceta),
     descripcionLente: tramite.descripcionLente || '',
-    medicionAnteojos: tramite.medicionAnteojos || '',
+    // medicion de anteojos removida de captura de unidad,
     qnaInclusion: tramite.qnaInclusion || '',
     fechaRecepcionOptica: toDateInputValue(tramite.fechaRecepcionOptica),
     fechaEntregaOptica: toDateInputValue(tramite.fechaEntregaOptica)
@@ -1256,7 +1253,7 @@ const EditCaptureModal = ({ tramite, onClose, onSave, loading }: {
       folioRecetaImss: form.folioRecetaImss.trim(),
       fechaExpedicionReceta: form.fechaExpedicionReceta.trim() ? new Date(form.fechaExpedicionReceta).toISOString() : '',
       descripcionLente: form.descripcionLente.trim(),
-      medicionAnteojos: form.medicionAnteojos.trim(),
+      // medicion de anteojos removida de captura de unidad,
       qnaInclusion: form.qnaInclusion.trim(),
       fechaRecepcionOptica: form.fechaRecepcionOptica.trim() ? new Date(form.fechaRecepcionOptica).toISOString() : '',
       fechaEntregaOptica: form.fechaEntregaOptica.trim() ? new Date(form.fechaEntregaOptica).toISOString() : ''
@@ -1295,7 +1292,7 @@ const EditCaptureModal = ({ tramite, onClose, onSave, loading }: {
           <input className="field-input" placeholder="Folio receta IMSS" value={form.folioRecetaImss} onChange={(e) => setField('folioRecetaImss', e.target.value)} />
           <input className="field-input" type="date" value={form.fechaExpedicionReceta} onChange={(e) => setField('fechaExpedicionReceta', e.target.value)} />
           <textarea className="field-input md:col-span-2 min-h-24" placeholder="Descripcion del lente" value={form.descripcionLente} onChange={(e) => setField('descripcionLente', e.target.value)} />
-          <input className="field-input" placeholder="Medicion de anteojos" value={form.medicionAnteojos} onChange={(e) => setField('medicionAnteojos', e.target.value)} />
+          {/* medicion de anteojos no se captura en unidad */}
           <input className="field-input" placeholder="Qna/Mes inclusion" value={form.qnaInclusion} onChange={(e) => setField('qnaInclusion', e.target.value)} />
           <input className="field-input" type="date" value={form.fechaRecepcionOptica} onChange={(e) => setField('fechaRecepcionOptica', e.target.value)} />
           <input className="field-input" type="date" value={form.fechaEntregaOptica} onChange={(e) => setField('fechaEntregaOptica', e.target.value)} />
@@ -1454,7 +1451,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     entidadLaboral: user.unidad,
     ooad: user.ooad
   });
-  const [receta, setReceta] = useState({ folio: '', descripcion: '', medicionAnteojos: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', dotacionNo: 1 });
+  const [receta, setReceta] = useState({ folio: '', descripcion: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', dotacionNo: 1 });
 
   const edadBeneficiario = useMemo(() => {
     if (!beneficiario.fechaNacimiento) return null;
@@ -1467,7 +1464,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     return edad;
   }, [beneficiario.fechaNacimiento]);
 
-  const requiereConstanciaEstudios = beneficiario.tipo === TipoBeneficiario.HIJO && (edadBeneficiario ?? 0) >= 16;
+  const requiereConstanciaEstudios = beneficiario.tipo === TipoBeneficiario.HIJO && (edadBeneficiario ?? 0) > 18;
 
   useEffect(() => {
     setBeneficiario((prev: any) => ({ ...prev, requiereConstanciaEstudios }));
@@ -1495,8 +1492,14 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       if (!beneficiario.nssHijo?.trim() || !/^\d{10,11}$/.test(beneficiario.nssHijo.trim())) return 'El NSS de hija/hijo debe tener 10 u 11 digitos.';
       if (!beneficiario.fechaNacimiento) return 'Captura fecha de nacimiento de hija/hijo.';
       if (requiereConstanciaEstudios) {
-        if (!beneficiario.constanciaEstudiosVigente) return 'Marca constancia de estudios vigente para hija/hijo (16 anos o mas).';
+        if (!beneficiario.constanciaEstudiosVigente) return 'Marca constancia de estudios vigente para hija/hijo mayor de 18 anos.';
         if (!beneficiario.fechaConstanciaEstudios) return 'Captura fecha de emision de constancia de estudios.';
+        const fechaConstancia = new Date(beneficiario.fechaConstanciaEstudios);
+        if (Number.isNaN(fechaConstancia.getTime())) return 'La fecha de constancia de estudios no es valida.';
+        const hoy = new Date();
+        const diffMs = hoy.getTime() - fechaConstancia.getTime();
+        const diffDias = diffMs / (1000 * 60 * 60 * 24);
+        if (diffDias > 90) return 'La constancia de estudios tiene mas de 3 meses. Solicita comprobante actualizado.';
       }
     }
 
@@ -1557,7 +1560,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       folioRecetaImss: receta.folio,
       fechaExpedicionReceta: new Date(receta.fechaExpedicionReceta).toISOString(),
       descripcionLente: receta.descripcion,
-      medicionAnteojos: receta.medicionAnteojos.trim(),
+      // medicion de anteojos se captura por proveedor fuera del formato oficial,
       qnaInclusion: receta.qnaInclusion.trim(),
       clavePresupuestal: '1A14-009-027',
       checklist: {} as any,
@@ -1696,7 +1699,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
 
               {beneficiario.tipo === TipoBeneficiario.HIJO && requiereConstanciaEstudios && (
                 <div className="md:col-span-2 p-6 rounded-3xl bg-amber-50 border border-amber-200">
-                  <p className="text-[11px] font-black text-amber-800 uppercase tracking-widest mb-3">Constancia de estudios requerida (16+ anos)</p>
+                  <p className="text-[11px] font-black text-amber-800 uppercase tracking-widest mb-3">Constancia de estudios requerida (mayor de 18 anos)</p>
                   <div className="flex items-center gap-3 mb-3">
                     <input type="checkbox" checked={Boolean(beneficiario.constanciaEstudiosVigente)}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, constanciaEstudiosVigente: e.target.checked }); }} />
@@ -1722,8 +1725,8 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               <input placeholder="FOLIO RECETA" aria-label="Folio de receta" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.folio} onChange={(e) => { setStepError(''); setReceta({ ...receta, folio: e.target.value }); }} />
             </div>
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Diagnostico y Especificacion</label>
-              <textarea placeholder="DESCRIBA LA GRADUACION..." aria-label="Diagnostico y especificacion" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => { setStepError(''); setReceta({ ...receta, descripcion: e.target.value }); }} />
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Diagnostico y especificacion de anteojos</label>
+              <textarea placeholder="DESCRIBA LA GRADUACION Y CARACTERISTICAS DE LOS ANTEOJOS..." aria-label="Diagnostico y especificacion de anteojos" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => { setStepError(''); setReceta({ ...receta, descripcion: e.target.value }); }} />
             </div>
             <div>
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Contrato colectivo aplicable (obligatorio)</label>
@@ -1737,10 +1740,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Fecha expedicion de receta</label>
               <input type="date" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black text-slate-800 shadow-inner" value={receta.fechaExpedicionReceta} onChange={(e) => { setStepError(''); setReceta({ ...receta, fechaExpedicionReceta: e.target.value }); }} />
             </div>
-            <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Medicion de anteojos (opcional)</label>
-              <input placeholder="Puede dejarse vacio" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-bold text-slate-800 shadow-inner" value={receta.medicionAnteojos} onChange={(e) => { setStepError(''); setReceta({ ...receta, medicionAnteojos: e.target.value }); }} />
-            </div>
+            {/* campo de medicion removido por requerimiento operativo */}
             <div className="flex gap-6">
               <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
               <button onClick={() => goToStep(3)} className="flex-1 py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>
