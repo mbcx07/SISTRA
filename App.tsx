@@ -1037,7 +1037,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Documentos requeridos al usuario</p>
                       <ul className="text-xs font-semibold text-slate-700 space-y-2">
                         <li>• Receta de lentes IMSS vigente.</li>
-                        <li>• IdentificaciÃ³n oficial de titular/solicitante.</li>
+                        <li>• Identificacion oficial de titular/solicitante.</li>
                         <li>• Si es hija/hijo: acta y constancia de estudios cuando aplique.</li>
                         <li>• Datos completos para formato 027 y tarjeta 028.</li>
                       </ul>
@@ -1376,7 +1376,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       </div>
       <div className="p-20">
         <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
-          Antes de capturar, valida en ventanilla: receta IMSS vigente, identificaciÃ³n oficial y (si aplica) constancia de estudios para hija/hijo.
+          Antes de capturar, valida en ventanilla: receta IMSS vigente, identificacion oficial y (si aplica) constancia de estudios para hija/hijo.
         </div>
         {stepError && (
           <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold" role="alert">
@@ -1405,7 +1405,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
 
               {beneficiario.tipo === TipoBeneficiario.HIJO && (
                 <div className="md:col-span-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Nombre de persona trabajadora titular</label>
+                  <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Nombre completo de la persona titular (trabajador/a)</label>
                   <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                     value={beneficiario.titularNombreCompleto}
                     onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, titularNombreCompleto: e.target.value }); }} />
@@ -1413,7 +1413,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               )}
 
               <div>
-                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Nombre(s)</label>
+                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">{beneficiario.tipo === TipoBeneficiario.HIJO ? 'Nombre(s) de hija/hijo beneficiario' : 'Nombre(s) del beneficiario'}</label>
                 <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                   value={beneficiario.nombre}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, nombre: e.target.value }); }} />
