@@ -650,9 +650,9 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         className="w-full max-w-md institutional-card p-6 lg:p-10"
       >
         <h1 className="text-2xl font-black text-imss-dark uppercase mb-8">Acceso SISTRA</h1>
-        <label className="field-label">MatrÃ­cula</label>
+        <label className="field-label">Matricula</label>
         <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className="field-input mb-5" placeholder="Ej. 99032103" inputMode="numeric" pattern="[0-9]*" required />
-        <label className="field-label">ContraseÃ±a</label>
+        <label className="field-label">Contrasena</label>
         <div className="relative mb-6">
           <input
             type={showPassword ? 'text' : 'password'}
@@ -666,8 +666,8 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-imss"
-            aria-label={showPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'}
-            title={showPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'}
+            aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+            title={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
@@ -675,9 +675,9 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         {infoMessage && <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm font-bold mb-4">{infoMessage}</p>}
         {(localError || error) && <p className="text-red-600 text-sm font-bold mb-4">{localError || error}</p>}
         <button disabled={loading} className="w-full py-4 rounded-xl btn-institutional disabled:opacity-50">
-          {loading ? 'Ingresando...' : 'Iniciar sesiÃ³n'}
+          {loading ? 'Ingresando...' : 'Iniciar sesion'}
         </button>
-        <p className="text-[11px] text-slate-500 mt-4">Acceso con Firebase Auth (matrÃ­cula + contraseÃ±a).</p>
+        <p className="text-[11px] text-slate-500 mt-4">Acceso con Firebase Auth (matricula + contrasena).</p>
       </form>
     </div>
   );
