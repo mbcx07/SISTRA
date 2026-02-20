@@ -438,9 +438,14 @@ const App: React.FC = () => {
           <button onClick={() => setPrintConfig({show: false, type: 'formato'})} className="flex items-center gap-2 font-bold uppercase text-xs">
             <ArrowLeft size={16} /> Volver al Sistema
           </button>
-          <button onClick={() => window.print()} className="bg-imss px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase text-xs border border-white/20">
-            <Printer size={16} /> Imprimir Documento
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => window.print()} className="bg-imss px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase text-xs border border-white/20">
+              <Printer size={16} /> Imprimir Documento
+            </button>
+            <button onClick={() => window.print()} className="bg-white/10 px-6 py-2 rounded-xl flex items-center gap-2 font-black uppercase text-xs border border-white/20">
+              <FileText size={16} /> Descargar PDF
+            </button>
+          </div>
         </div>
         <div className="print-stage print-container py-4 bg-slate-100 min-h-screen">
            {printConfig.type === 'formato' ? (
@@ -481,9 +486,7 @@ const App: React.FC = () => {
             {canAccessTab('nuevo') && (
               <SidebarItem icon={<PlusCircle size={20} />} label="Nueva Captura" active={activeTab === 'nuevo'} onClick={() => goToTab('nuevo')} />
             )}
-            {canAccessTab('central') && (
-              <SidebarItem icon={<ClipboardCheck size={20} />} label="Central" active={activeTab === 'central'} onClick={() => goToTab('central')} />
-            )}
+            {/* vista central deshabilitada por requerimiento operativo */}
             {canAccessTab('adminUsers') && (
               <SidebarItem icon={<Settings size={20} />} label="Usuarios" active={activeTab === 'adminUsers'} onClick={() => goToTab('adminUsers')} />
             )}
@@ -511,7 +514,7 @@ const App: React.FC = () => {
                 {activeTab === 'dashboard' && 'Resumen Institucional'}
                 {activeTab === 'tramites' && 'Gestión de Trámites'}
                 {activeTab === 'nuevo' && 'Solicitud de Dotación'}
-                {activeTab === 'central' && 'Auditoría Central'}
+                {activeTab === 'central' && 'Gestión de Trámites'}
               </h2>
             </div>
             
@@ -583,7 +586,7 @@ const App: React.FC = () => {
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
             {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} /> : <AccessDeniedView />)}
-            {activeTab === 'central' && (canAccessTab('central') ? <CentralView tramites={tramites} /> : <AccessDeniedView />)}
+            {/* central view removida por operación */}
             {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} /> : <AccessDeniedView />)}
           </div>
         </main>
@@ -993,10 +996,10 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                <p className="text-imss-gold font-black text-[10px] uppercase tracking-[0.3em] mt-3">SISTRA ID: {tramite.id}</p>
              </div>
              <div className="flex items-center gap-4">
-               <button onClick={() => onPrint('formato')} disabled={tramite.estatus !== EstatusWorkflow.AUTORIZADO && tramite.estatus !== EstatusWorkflow.ENTREGADO && tramite.estatus !== EstatusWorkflow.CERRADO} title="Solo disponible para trámites autorizados" className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5 disabled:opacity-40 disabled:cursor-not-allowed">
+               <button onClick={() => onPrint('formato')} className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5">
                  <Printer size={20} className="text-imss-gold" /> Formato 027
                </button>
-               <button onClick={() => onPrint('tarjeta')} disabled={tramite.estatus !== EstatusWorkflow.AUTORIZADO && tramite.estatus !== EstatusWorkflow.ENTREGADO && tramite.estatus !== EstatusWorkflow.CERRADO} title="Solo disponible para trámites autorizados" className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5 disabled:opacity-40 disabled:cursor-not-allowed">
+               <button onClick={() => onPrint('tarjeta')} className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5">
                  <CreditCard size={20} className="text-imss-gold" /> Tarjeta 028
                </button>
                <button onClick={onClose} className="p-4 bg-white/5 hover:bg-white/20 rounded-2xl text-white/40 hover:text-white transition-all">
@@ -1012,11 +1015,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
           </div>
 
           <div className="flex-1 overflow-auto p-4 lg:p-12 bg-white">
-            {tramite.estatus !== EstatusWorkflow.AUTORIZADO && tramite.estatus !== EstatusWorkflow.ENTREGADO && tramite.estatus !== EstatusWorkflow.CERRADO && (
-              <div className="mb-8 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-black uppercase tracking-wider">
-                La impresión se habilita al autorizar el trámite.
-              </div>
-            )}
+            {/* impresión/reimpresión habilitada desde captura completada */}
             {activeTab === 'info' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
                 <div className="space-y-10">
@@ -1280,7 +1279,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     entidadLaboral: user.unidad,
     ooad: user.ooad
   });
-  const [receta, setReceta] = useState({ folio: '', descripcion: '', dotacionNo: 1, importeSolicitado: 0 });
+  const [receta, setReceta] = useState({ folio: '', descripcion: '', dotacionNo: 1 });
 
   const validateStep1 = () => {
     return validateNuevoTramiteStep1({
@@ -1292,8 +1291,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
   const validateStep2 = () => {
     return validateNuevoTramiteStep2({
       folioRecetaImss: receta.folio,
-      descripcionLente: receta.descripcion,
-      importeSolicitado: Number(receta.importeSolicitado || 0)
+      descripcionLente: receta.descripcion
     });
   };
 
@@ -1324,7 +1322,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       estatus: EstatusWorkflow.EN_REVISION_DOCUMENTAL,
       dotacionNumero: receta.dotacionNo,
       requiereDictamenMedico: receta.dotacionNo >= 3,
-      importeSolicitado: Number(receta.importeSolicitado || 0),
+      importeSolicitado: 0,
       folioRecetaImss: receta.folio,
       fechaExpedicionReceta: new Date().toISOString(),
       descripcionLente: receta.descripcion,
@@ -1380,10 +1378,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Diagnóstico y Especificación</label>
                <textarea placeholder="DESCRIBA LA GRADUACIÓN..." aria-label="Diagnóstico y especificación" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => { setStepError(''); setReceta({...receta, descripcion: e.target.value}); }} />
              </div>
-             <div>
-               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Importe Solicitado (MXN)</label>
-               <input type="number" min={0} step="0.01" placeholder="0.00" aria-label="Importe solicitado" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black text-imss text-xl shadow-inner" value={receta.importeSolicitado} onChange={(e) => { setStepError(''); setReceta({...receta, importeSolicitado: Number(e.target.value || 0)}); }} />
-             </div>
+             {/* importe solicitado se captura fuera de unidad */}
              <div className="flex gap-6">
                <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
                <button onClick={() => goToStep(3)} className="flex-1 py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>

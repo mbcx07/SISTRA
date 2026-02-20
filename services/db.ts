@@ -116,9 +116,9 @@ const bootstrapPrimaryAdminProfile = async (uid: string, matricula: string, emai
 export type AppTab = 'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers';
 
 export const TABS_BY_ROLE: Record<Role, AppTab[]> = {
-  [Role.ADMIN_SISTEMA]: ['dashboard', 'tramites', 'nuevo', 'central', 'adminUsers'],
+  [Role.ADMIN_SISTEMA]: ['dashboard', 'tramites', 'nuevo', 'adminUsers'],
   [Role.CAPTURISTA_UNIDAD]: ['dashboard', 'tramites', 'nuevo'],
-  [Role.CONSULTA_CENTRAL]: ['dashboard', 'tramites', 'central'],
+  [Role.CONSULTA_CENTRAL]: ['dashboard', 'tramites'],
   [Role.VALIDADOR_PRESTACIONES]: ['dashboard', 'tramites'],
   [Role.AUTORIZADOR_JSDP_DSPNC]: ['dashboard', 'tramites']
 };
@@ -167,7 +167,6 @@ export const validateNuevoTramiteStep2 = (payload: { folioRecetaImss?: string; d
   if (!payload.descripcionLente?.trim() || payload.descripcionLente.trim().length < VALIDATION_RULES.DIAGNOSTICO_MIN_CHARS) {
     return `Describe el diagnóstico con al menos ${VALIDATION_RULES.DIAGNOSTICO_MIN_CHARS} caracteres.`;
   }
-  if (Number(payload.importeSolicitado || 0) <= 0) return 'El importe solicitado debe ser mayor a 0.';
   return '';
 };
 
