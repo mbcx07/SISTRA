@@ -483,10 +483,10 @@ const App: React.FC = () => {
           <div className="hidden lg:block p-6 border-t border-white/5">
             <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5">
               <div className="w-10 h-10 rounded-full bg-imss flex items-center justify-center text-white font-black border border-imss-gold/40 shadow-inner">
-                {user?.nombre.charAt(0)}
+                {user?.nombre?.charAt(0) || 'U'}
               </div>
               <div className="overflow-hidden">
-                <p className="text-xs font-black text-white truncate uppercase">{user?.nombre.split(' ')[0]}</p>
+                <p className="text-xs font-black text-white truncate uppercase">{user?.nombre?.split(' ')[0] || 'Usuario'}</p>
                 <p className="text-[9px] text-imss-gold font-black truncate uppercase tracking-tighter">{user?.role.replace(/_/g, ' ')}</p>
               </div>
             </div>
