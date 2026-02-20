@@ -75,6 +75,11 @@ const App: React.FC = () => {
   const [uiMessage, setUiMessage] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [presupuestoGlobal, setPresupuestoGlobal] = useState<number>(() => {
+    const raw = localStorage.getItem('sistra.presupuestoGlobal');
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 800000;
+  });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   // EFECTO DE INICIALIZACIÓN: Único punto de entrada
@@ -120,6 +125,10 @@ const App: React.FC = () => {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sistra.presupuestoGlobal', String(presupuestoGlobal));
+  }, [presupuestoGlobal]);
 
   const forceLogoutWithMessage = (message: string) => {
     logoutSession();
@@ -563,7 +572,15 @@ const App: React.FC = () => {
                 <button className="text-xs uppercase" onClick={() => setUiMessage(null)}>Cerrar</button>
               </div>
             )}
-            {activeTab === 'dashboard' && <DashboardView stats={stats} chartData={chartData} gastoMetrics={gastoMetrics} />}
+            {activeTab === 'dashboard' && (
+              <DashboardView
+                stats={stats}
+                chartData={chartData}
+                gastoMetrics={gastoMetrics}
+                presupuestoGlobal={presupuestoGlobal}
+                onUpdatePresupuesto={setPresupuestoGlobal}
+              />
+            )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
             {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} /> : <AccessDeniedView />)}
             {activeTab === 'central' && (canAccessTab('central') ? <CentralView tramites={tramites} /> : <AccessDeniedView />)}
@@ -782,7 +799,10 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
   </button>
 );
 
-const DashboardView = ({ stats, chartData, gastoMetrics }: any) => (
+const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUpdatePresupuesto }: any) => {
+  const avancePct = presupuestoGlobal > 0 ? Math.min(100, (Number(gastoMetrics.global || 0) / presupuestoGlobal) * 100) : 0;
+
+  return (
   <div className="space-y-10 animate-in fade-in duration-700">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
       <StatCard label="Total Cloud" value={stats.total} icon={<FileText className="text-imss" />} color="imss" />
@@ -790,6 +810,30 @@ const DashboardView = ({ stats, chartData, gastoMetrics }: any) => (
       <StatCard label="Autorizados" value={stats.autorizados} icon={<CheckCircle2 className="text-emerald-600" />} color="emerald" />
       <StatCard label="Entregados" value={stats.entregados} icon={<LogOut className="text-slate-600" />} color="slate" />
       <StatCard label="Gasto Global" value={`$${Number(gastoMetrics.global || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon={<DollarSign className="text-imss" />} color="imss" />
+    </div>
+
+    <div className="bg-white rounded-[32px] border border-slate-100 p-6 lg:p-8 shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-end">
+        <div>
+          <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto global editable</label>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={presupuestoGlobal}
+            onChange={(e) => onUpdatePresupuesto(Number(e.target.value || 0))}
+            className="w-full p-3 rounded-xl border-2 border-slate-200 font-black text-imss"
+          />
+        </div>
+        <div>
+          <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Avance de consumo</p>
+          <p className="text-2xl font-black text-slate-800">{avancePct.toFixed(2)}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Disponible estimado</p>
+          <p className="text-2xl font-black text-emerald-700">${Math.max(0, presupuestoGlobal - Number(gastoMetrics.global || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </div>
+      </div>
     </div>
     
     <div className="bg-white p-12 rounded-[50px] border border-slate-100 shadow-sm min-h-[500px] flex flex-col">
@@ -819,6 +863,7 @@ const DashboardView = ({ stats, chartData, gastoMetrics }: any) => (
     </div>
   </div>
 );
+};
 
 const StatCard = ({ label, value, icon, color }: any) => {
   const bgColors: any = { imss: 'bg-imss-light', amber: 'bg-amber-100', emerald: 'bg-emerald-100', slate: 'bg-slate-100' };
