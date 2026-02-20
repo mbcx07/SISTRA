@@ -956,7 +956,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
 const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, historicalDotations, loading }: any) => {
   const [activeTab, setActiveTab] = useState<'info' | 'bitacora' | 'tarjeta'>('info');
   const [bitacora, setBitacora] = useState<Bitacora[]>([]);
-  const [importeAutorizado, setImporteAutorizado] = useState<number>(Number(tramite.importeAutorizado ?? tramite.importeSolicitado ?? 0));
+  // control de importe se gestiona fuera de la unidad
 
   useEffect(() => {
     let isMounted = true;
@@ -972,7 +972,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
     return () => { isMounted = false; };
   }, [tramite.id]);
 
-  const canApprove = canAuthorizeImporte(user.role) && tramite.estatus === EstatusWorkflow.EN_REVISION_DOCUMENTAL;
+  const canApprove = false;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1032,52 +1032,20 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                 </div>
                 <div className="space-y-10">
                    <div className="p-10 bg-imss-light/30 rounded-[40px] border border-imss/10 space-y-6">
-                    <h4 className="text-[11px] font-black text-imss/50 uppercase tracking-[0.2em]">GestiÃ³n de Importe y ValidaciÃ³n</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white rounded-2xl p-4 border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase">Importe solicitado</p>
-                        <p className="text-lg font-black text-slate-700">${Number(tramite.importeSolicitado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                      </div>
-                      <div className="bg-white rounded-2xl p-4 border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase">Importe autorizado</p>
-                        <p className="text-lg font-black text-imss">${Number(tramite.importeAutorizado ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                      </div>
+                    <h4 className="text-[11px] font-black text-imss/50 uppercase tracking-[0.2em]">ValidaciÃ³n documental en unidad</h4>
+                    <div className="bg-white rounded-2xl p-5 border border-slate-100">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Documentos requeridos al usuario</p>
+                      <ul className="text-xs font-semibold text-slate-700 space-y-2">
+                        <li>• Receta de lentes IMSS vigente.</li>
+                        <li>• IdentificaciÃ³n oficial de titular/solicitante.</li>
+                        <li>• Si es hija/hijo: acta y constancia de estudios cuando aplique.</li>
+                        <li>• Datos completos para formato 027 y tarjeta 028.</li>
+                      </ul>
                     </div>
-
-                    {canApprove ? (
-                      <>
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Monto a autorizar (admin o autorizador)</label>
-                          <input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={importeAutorizado}
-                            onChange={(e) => setImporteAutorizado(Number(e.target.value || 0))}
-                            className="w-full p-4 rounded-2xl border-2 border-slate-200 font-black text-imss"
-                          />
-                        </div>
-                        <button 
-                          disabled={loading || importeAutorizado < 0} 
-                          onClick={() => onUpdateEstatus(tramite.id, EstatusWorkflow.AUTORIZADO, undefined, importeAutorizado)} 
-                          className="w-full py-6 bg-imss text-white font-black uppercase text-xs tracking-widest rounded-[24px] hover:bg-imss-dark shadow-2xl disabled:opacity-50 transition-all flex items-center justify-center gap-4"
-                        >
-                          {loading ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
-                          {loading ? 'SINCRONIZANDO...' : 'VALIDAR IMPORTE Y AUTORIZAR'}
-                        </button>
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-4 text-slate-400 bg-white p-6 rounded-2xl border border-slate-100">
-                        <AlertTriangle size={20} />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Solo ADMIN_SISTEMA o AUTORIZADOR_JSDP_DSPNC pueden validar y autorizar importes.</p>
-                      </div>
-                    )}
-
-                    {(tramite.validadoPor || tramite.fechaValidacionImporte) && (
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white p-4 rounded-2xl border border-slate-100">
-                        Validado por: {tramite.validadoPor || 'N/A'} Â· Fecha: {tramite.fechaValidacionImporte ? new Date(tramite.fechaValidacionImporte).toLocaleString() : 'N/A'}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-4 text-amber-700 bg-amber-50 p-6 rounded-2xl border border-amber-200">
+                      <AlertTriangle size={20} />
+                      <p className="text-[10px] font-black uppercase tracking-widest">La unidad solo captura solicitudes e imprime/reimprime formatos. El control de importe se realiza fuera de esta pantalla.</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1407,6 +1375,9 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
         ))}
       </div>
       <div className="p-20">
+        <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+          Antes de capturar, valida en ventanilla: receta IMSS vigente, identificaciÃ³n oficial y (si aplica) constancia de estudios para hija/hijo.
+        </div>
         {stepError && (
           <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold" role="alert">
             {stepError}
