@@ -801,6 +801,11 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
 
 const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUpdatePresupuesto }: any) => {
   const avancePct = presupuestoGlobal > 0 ? Math.min(100, (Number(gastoMetrics.global || 0) / presupuestoGlobal) * 100) : 0;
+  const semaforo = avancePct >= 90
+    ? { label: 'Rojo', badge: 'bg-red-100 text-red-700 border-red-200' }
+    : avancePct >= 80
+      ? { label: 'Amarillo', badge: 'bg-amber-100 text-amber-700 border-amber-200' }
+      : { label: 'Verde', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
 
   return (
   <div className="space-y-10 animate-in fade-in duration-700">
@@ -827,7 +832,10 @@ const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUp
         </div>
         <div>
           <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Avance de consumo</p>
-          <p className="text-2xl font-black text-slate-800">{avancePct.toFixed(2)}%</p>
+          <div className="flex items-center gap-3">
+            <p className="text-2xl font-black text-slate-800">{avancePct.toFixed(2)}%</p>
+            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${semaforo.badge}`}>{semaforo.label}</span>
+          </div>
         </div>
         <div>
           <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Disponible estimado</p>
