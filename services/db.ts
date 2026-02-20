@@ -474,6 +474,17 @@ export const dbService = {
     return querySnapshot.docs.map(d => ({ ...d.data(), id: d.id } as User));
   },
 
+  async adminUpdateUserRole(adminUser: User, userId: string, role: Role): Promise<void> {
+    if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede actualizar roles.');
+    await updateDoc(doc(db, 'usuarios', userId), { role });
+  },
+
+  async adminDeleteUser(adminUser: User, userId: string): Promise<void> {
+    if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede eliminar usuarios.');
+    if (adminUser.id === userId) throw new Error('No puedes eliminar tu propio usuario administrador.');
+    await deleteDoc(doc(db, 'usuarios', userId));
+  },
+
   async getTramites(): Promise<Tramite[]> {
     try {
       const user = await ensureSession();
