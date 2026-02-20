@@ -46,7 +46,9 @@ export const mockDb = {
 export const CURRENT_USER: User = {
   id: 'usr_1',
   nombre: 'Lic. Roberto Martínez',
+  matricula: 'CAP001',
   role: Role.CAPTURISTA_UNIDAD,
   unidad: 'UMF-01',
-  ooad: '03 - BAJA CALIFORNIA SUR'
+  ooad: '03 - BAJA CALIFORNIA SUR',
+  activo: true
 };

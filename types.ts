@@ -74,6 +74,12 @@ export interface Tramite {
   requiereDictamenMedico: boolean;
   motivoRechazo?: string;
   
+  // Control de importes
+  importeSolicitado: number;
+  importeAutorizado?: number;
+  validadoPor?: string;
+  fechaValidacionImporte?: string;
+  
   // Datos Receta
   folioRecetaImss: string;
   fechaExpedicionReceta: string;
@@ -96,6 +102,15 @@ export interface Tramite {
   firmaAutorizacion?: string;
   firmaRecibiConformidad?: string;
   nombreAutorizador?: string;
+
+  // Control de impresión / auditoría
+  impresiones?: {
+    formato: number;
+    tarjeta: number;
+    ultimaFecha?: string;
+    ultimoUsuario?: string;
+    ultimoMotivoReimpresion?: string;
+  };
 }
 
 export interface Bitacora {
@@ -105,12 +120,17 @@ export interface Bitacora {
   usuario: string;
   accion: string;
   descripcion: string;
+  categoria?: 'WORKFLOW' | 'IMPRESION' | 'SISTEMA';
+  datos?: Record<string, any>;
 }
 
 export interface User {
   id: string;
   nombre: string;
+  matricula: string;
   role: Role;
   unidad: string;
   ooad: string;
+  activo: boolean;
+  authEmail?: string;
 }
