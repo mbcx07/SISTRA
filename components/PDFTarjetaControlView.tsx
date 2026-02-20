@@ -18,6 +18,12 @@ const formatDateTime = (value?: string) => (value ? new Date(value).toLocaleStri
 
 export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ beneficiario: b, dotaciones, metadata }) => {
   const getDotacionData = (num: number) => dotaciones.find(d => d.dotacionNumero === num);
+  const titularNombre = b.tipo === TipoBeneficiario.HIJO
+    ? b.titularNombreCompleto || 'N/A'
+    : `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`.trim();
+  const nombreHijo = b.tipo === TipoBeneficiario.HIJO
+    ? `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`.trim()
+    : 'N/A';
 
   const checkbox = (checked: boolean) => (
     <div className="w-6 h-6 border border-black flex items-center justify-center text-xs font-black">{checked ? 'X' : ''}</div>
@@ -82,9 +88,10 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
       </div>
 
       <div className="space-y-2 mb-3 text-[9px]">
-        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Nombre(s):</span><span className="border-b border-black flex-1 font-black">{`${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`}</span></div>
-        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[250px]">Nombre(s) de la hija o hijo de la persona trabajadora:</span><span className="border-b border-black flex-1 font-bold">{b.tipo === TipoBeneficiario.HIJO ? b.nombre : 'N/A'}</span></div>
+        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Nombre(s):</span><span className="border-b border-black flex-1 font-black">{titularNombre}</span></div>
+        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[250px]">Nombre(s) de la hija o hijo de la persona trabajadora:</span><span className="border-b border-black flex-1 font-bold">{nombreHijo}</span></div>
         <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Adscripción:</span><span className="border-b border-black flex-1 font-bold">{b.entidadLaboral || 'N/A'}</span></div>
+        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[160px]">Constancia de estudios:</span><span className="border-b border-black flex-1 font-bold">{b.requiereConstanciaEstudios ? (b.constanciaEstudiosVigente ? 'VIGENTE' : 'NO PRESENTADA') : 'NO APLICA'}</span></div>
       </div>
 
       <div className="border-2 border-black flex mb-3">

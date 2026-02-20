@@ -52,6 +52,10 @@ export interface Beneficiario {
   tipoContratacion: string;
   fechaNacimiento?: string;
   ooad: string;
+  titularNombreCompleto?: string;
+  requiereConstanciaEstudios?: boolean;
+  constanciaEstudiosVigente?: boolean;
+  fechaConstanciaEstudios?: string;
 }
 
 export interface Evidencia {

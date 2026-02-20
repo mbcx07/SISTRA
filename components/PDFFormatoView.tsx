@@ -17,6 +17,10 @@ const formatDateTime = (value?: string) => (value ? new Date(value).toLocaleStri
 
 export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite, metadata }) => {
   const b = tramite.beneficiario;
+  const titularNombre = b.tipo === TipoBeneficiario.HIJO
+    ? b.titularNombreCompleto || 'N/A'
+    : `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`.trim();
+  const nombreHijo = b.tipo === TipoBeneficiario.HIJO ? `${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`.trim() : 'N/A';
 
   const checkbox = (checked: boolean) => (
     <div className="w-6 h-6 border border-black flex items-center justify-center font-black text-xs leading-none">
@@ -70,13 +74,20 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite, metadat
       </div>
 
       <div className="space-y-3 mb-4">
-        <div><p className="font-bold">Nombre persona trabajadora/jubilada/pensionada</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold">{`${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`}</div></div>
-        <div><p className="font-bold">Nombre hija/hijo</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold">{b.tipo === TipoBeneficiario.HIJO ? b.nombre : 'N/A'}</div></div>
+        <div><p className="font-bold">Nombre persona trabajadora/jubilada/pensionada</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold">{titularNombre}</div></div>
+        <div><p className="font-bold">Nombre hija/hijo</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold">{nombreHijo}</div></div>
       </div>
 
       <div className="space-y-3 mb-4">
         <div><p className="font-bold">NSS persona trabajadora/jubilada/pensionada</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold tracking-widest">{b.nssTrabajador}</div></div>
         <div><p className="font-bold">NSS hija/hijo</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold tracking-widest">{b.nssHijo || 'N/A'}</div></div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4">
+        <div className="flex"><span className="font-bold w-44">Tipo de contratación:</span><div className="border-b border-black flex-1 text-center font-bold">{b.tipoContratacion || 'N/A'}</div></div>
+        <div className="flex"><span className="font-bold w-44">Fecha nacimiento:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(b.fechaNacimiento)}</div></div>
+        <div className="flex"><span className="font-bold w-44">Constancia de estudios:</span><div className="border-b border-black flex-1 text-center font-bold">{b.requiereConstanciaEstudios ? (b.constanciaEstudiosVigente ? 'VIGENTE' : 'NO PRESENTADA') : 'NO APLICA'}</div></div>
+        <div className="flex"><span className="font-bold w-44">Fecha constancia:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(b.fechaConstanciaEstudios)}</div></div>
       </div>
 
       <div className="mb-3">
