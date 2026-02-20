@@ -342,6 +342,16 @@ const App: React.FC = () => {
     if (!user || !selectedTramite) return;
 
     setLoading(true);
+
+    const fechaAutorizacion = new Date().toISOString();
+    let metadata: PrintMetadata = {
+      folio: selectedTramite.folio,
+      documento: type,
+      emision: 'ORIGINAL',
+      autorizadoPor: selectedTramite.nombreAutorizador || user.nombre,
+      fechaAutorizacion
+    };
+
     try {
       const bitacoraActual = await dbService.getBitacora(selectedTramite.id);
       const impresionesPrevias = bitacoraActual.filter(
@@ -360,15 +370,14 @@ const App: React.FC = () => {
         motivoReimpresion = motivo.trim();
       }
 
-      const fechaAutorizacion = new Date().toISOString();
-      const metadata: PrintMetadata = {
-        folio: selectedTramite.folio,
-        documento: type,
+      metadata = {
+        ...metadata,
         emision: esReimpresion ? 'REIMPRESION' : 'ORIGINAL',
-        autorizadoPor: selectedTramite.nombreAutorizador || user.nombre,
-        fechaAutorizacion,
         motivoReimpresion
       };
+
+      // abrir vista de impresion aunque falle la bitacora
+      setPrintConfig({ show: true, type, metadata });
 
       await dbService.addBitacora({
         tramiteId: selectedTramite.id,
@@ -389,14 +398,14 @@ const App: React.FC = () => {
           ultimoMotivoReimpresion: motivoReimpresion
         }
       });
-
-      setPrintConfig({ show: true, type, metadata });
     } catch (e: any) {
       if (isSessionInvalidError(e)) {
         forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
         return;
       }
-      setUiMessage('No fue posible registrar la impresion en bitacora.');
+      // fallback: permitir impresion aunque falle registro secundario
+      setPrintConfig({ show: true, type, metadata });
+      setUiMessage('Se abrio la vista de impresion, pero fallo el registro en bitacora.');
     } finally {
       setLoading(false);
     }
@@ -545,7 +554,12 @@ const App: React.FC = () => {
         {/* Main */}
         <main className="flex-1 flex flex-col overflow-hidden no-print bg-[#F9FBFC]">
           <header className="min-h-20 bg-white border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between px-4 py-4 lg:px-10 shadow-sm z-10 gap-3">
-            <div>
+            <div className="flex items-center gap-3">
+              {activeTab !== 'dashboard' && (
+                <button className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase" onClick={() => setActiveTab('dashboard')}>
+                  Regresar
+                </button>
+              )}
               <h2 className="text-base lg:text-xl font-black text-slate-800 flex items-center gap-3 uppercase tracking-tight">
                 <span className="w-1.5 h-8 bg-imss rounded-full"></span>
                 {activeTab === 'dashboard' && 'Resumen Institucional'}
