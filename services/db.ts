@@ -21,7 +21,10 @@ import {
   createUserWithEmailAndPassword,
   setPersistence,
   inMemoryPersistence,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from "firebase/auth";
 import { Tramite, Bitacora, Role, User, EstatusWorkflow } from '../types';
 import { validateWorkflowTransition } from './workflow';
@@ -46,7 +49,14 @@ let currentUserProfile: User | null = null;
 let creatorAuthPromise: Promise<ReturnType<typeof getAuth>> | null = null;
 
 const normalizeMatricula = (matricula: string) => matricula.trim().toUpperCase();
-const matriculaToEmail = (matricula: string) => `${normalizeMatricula(matricula).toLowerCase()}@${AUTH_EMAIL_DOMAIN}`;
+const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
+  '99032103': 'moises.beltran@imss.gob.mx',
+};
+const matriculaToEmail = (matricula: string) => {
+  const normalized = normalizeMatricula(matricula);
+  if (MATRICULA_EMAIL_OVERRIDES[normalized]) return MATRICULA_EMAIL_OVERRIDES[normalized];
+  return `${normalized.toLowerCase()}@${AUTH_EMAIL_DOMAIN}`;
+};
 
 const getCreatorAuth = async () => {
   if (!creatorAuthPromise) {
@@ -332,6 +342,50 @@ export const adminResetPassword = async (
   const user = userDoc.data() as User;
   const email = user.authEmail || matriculaToEmail(user.matricula);
   await sendPasswordResetEmail(auth, email);
+};
+
+export const changeOwnPassword = async (
+  currentPassword: string,
+  newPassword: string
+): Promise<void> => {
+  const firebaseUser = auth.currentUser;
+  if (!firebaseUser) {
+    clearSession();
+    throw new AuthError('INVALID_SESSION', 'Sesión inválida. Inicia sesión nuevamente.');
+  }
+
+  const strengthIssues = validatePasswordStrength(newPassword);
+  if (strengthIssues.length > 0) {
+    throw new AuthError('WEAK_PASSWORD', `La nueva contraseña no cumple la política: ${strengthIssues.join(' ')}`);
+  }
+
+  const email = firebaseUser.email;
+  if (!email) {
+    throw new AuthError('INVALID_SESSION', 'No fue posible validar tu cuenta. Inicia sesión nuevamente.');
+  }
+
+  try {
+    const credential = EmailAuthProvider.credential(email, currentPassword);
+    await reauthenticateWithCredential(firebaseUser, credential);
+    await updatePassword(firebaseUser, newPassword);
+  } catch (error: any) {
+    const code = String(error?.code || '');
+
+    if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+      throw new AuthError('INVALID_CREDENTIALS', 'La contraseña actual es incorrecta.');
+    }
+
+    if (code === 'auth/too-many-requests') {
+      throw new AuthError('INVALID_CREDENTIALS', 'Demasiados intentos fallidos. Inicia sesión nuevamente.');
+    }
+
+    if (code === 'auth/requires-recent-login' || code === 'auth/user-token-expired') {
+      clearSession();
+      throw new AuthError('INVALID_SESSION', 'Tu sesión expiró. Inicia sesión nuevamente.');
+    }
+
+    throw new Error('No se pudo actualizar la contraseña. Intenta nuevamente.');
+  }
 };
 
 export const dbService = {
