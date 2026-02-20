@@ -287,7 +287,7 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const newId = await dbService.saveTramite(newTramite);
-      await dbService.addBitácora({
+      await dbService.addBitacora({
         tramiteId: newId,
         usuario: user.nombre,
         accion: 'CREACION CLOUD',
@@ -354,7 +354,7 @@ const App: React.FC = () => {
     };
 
     try {
-      const BitácoraActual = await dbService.getBitácora(selectedTramite.id);
+      const BitácoraActual = await dbService.getBitacora(selectedTramite.id);
       const impresionesPrevias = BitácoraActual.filter(
         (b) => b.categoria === 'IMPRESION' && b.datos?.documento === type
       ).length;
@@ -380,7 +380,7 @@ const App: React.FC = () => {
       // abrir vista de impresion aunque falle la Bitácora
       setPrintConfig({ show: true, type, metadata });
 
-      await dbService.addBitácora({
+      await dbService.addBitacora({
         tramiteId: selectedTramite.id,
         usuario: user.nombre,
         accion: 'IMPRESION_DOCUMENTO',
@@ -422,7 +422,7 @@ const App: React.FC = () => {
     try {
       await dbService.saveTramite({ id: tramiteId, ...payload } as Partial<Tramite>);
       const target = captureEditTarget;
-      await dbService.addBitácora({
+      await dbService.addBitacora({
         tramiteId,
         usuario: user.nombre,
         accion: 'EDICION_CAPTURA_COMPLETA',
@@ -448,7 +448,7 @@ const App: React.FC = () => {
 
     setLoading(true);
     try {
-      await dbService.addBitácora({
+      await dbService.addBitacora({
         tramiteId: tramite.id,
         usuario: user.nombre,
         accion: 'ELIMINACION_SOLICITUD',
@@ -1041,7 +1041,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
     let isMounted = true;
     const fetchBitácora = async () => {
       try {
-        const data = await dbService.getBitácora(tramite.id);
+        const data = await dbService.getBitacora(tramite.id);
         if (isMounted) setBitácora(data);
       } catch (e) {
         if (isMounted) setBitácora([]);
@@ -1780,6 +1780,7 @@ const CentralView = ({ tramites }: any) => (
 );
 
 export default App;
+
 
 
 
