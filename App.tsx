@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import './App.css';
 import { 
   Role, 
   EstatusWorkflow, 
@@ -8,7 +9,7 @@ import {
   User,
   Bitacora
 } from './types';
-import { dbService, ensureSession } from './services/db';
+import { dbService, ensureSession, loginWithMatricula, logoutSession, adminCreateCapturista, adminResetPassword, AuthError, validatePasswordStrength, canAccessTabByRole, canAuthorizeImporte, validateLoginInput, validateNuevoTramiteStep1, validateNuevoTramiteStep2, UX_MESSAGES, TABS_BY_ROLE, SESSION_INVALID_TOKENS } from './services/db';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -26,7 +27,8 @@ import {
   AlertTriangle,
   ClipboardCheck,
   Settings,
-  LogOut
+  LogOut,
+  DollarSign
 } from 'lucide-react';
 import { generateFolio } from './utils';
 import { COLOR_ESTATUS } from './constants';
@@ -43,15 +45,30 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
+type PrintDocumentType = 'formato' | 'tarjeta';
+type PrintEmissionType = 'ORIGINAL' | 'REIMPRESION';
+
+interface PrintMetadata {
+  folio: string;
+  documento: PrintDocumentType;
+  emision: PrintEmissionType;
+  autorizadoPor: string;
+  fechaAutorizacion: string;
+  motivoReimpresion?: string;
+}
+
+const SESSION_INVALID_MESSAGES = SESSION_INVALID_TOKENS;
+
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tramites' | 'nuevo' | 'central'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers'>('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [tramites, setTramites] = useState<Tramite[]>([]);
   const [selectedTramite, setSelectedTramite] = useState<Tramite | null>(null);
-  const [printConfig, setPrintConfig] = useState<{show: boolean, type: 'formato' | 'tarjeta'}>({show: false, type: 'formato'});
+  const [printConfig, setPrintConfig] = useState<{show: boolean, type: PrintDocumentType, metadata?: PrintMetadata}>({show: false, type: 'formato'});
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uiMessage, setUiMessage] = useState<string | null>(null);
 
   // EFECTO DE INICIALIZACIÓN: Único punto de entrada
   useEffect(() => {
@@ -62,18 +79,15 @@ const App: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        // 1. Asegurar sesión
         const userProfile = await ensureSession();
         if (!isMounted) return;
         setUser(userProfile);
-        
-        // 2. Si Auth está roto, no cargamos más pero no crasheamos
-        if (userProfile.id === 'AUTH_CONFIG_REQUIRED') {
+
+        if (!userProfile) {
           setLoading(false);
           return;
         }
 
-        // 3. Cargar datos
         const data = await dbService.getTramites();
         if (!isMounted) return;
         setTramites(data || []);
@@ -89,17 +103,57 @@ const App: React.FC = () => {
     return () => { isMounted = false; };
   }, []);
 
+  const forceLogoutWithMessage = (message: string) => {
+    logoutSession();
+    setUser(null);
+    setTramites([]);
+    setSelectedTramite(null);
+    setActiveTab('dashboard');
+    setUiMessage(message);
+  };
+
+  const isSessionInvalidError = (e: any) => {
+    const msg = String(e?.message || '');
+    return (e instanceof AuthError && e.code === 'INVALID_SESSION') || SESSION_INVALID_MESSAGES.some(token => msg.includes(token));
+  };
+
   const loadData = async () => {
-    if (!user || user.id === 'AUTH_CONFIG_REQUIRED') return;
+    if (!user) return;
     setLoading(true);
     try {
       const data = await dbService.getTramites();
       setTramites(data || []);
     } catch (e: any) {
-      setError("Error al sincronizar con la nube.");
+      if (isSessionInvalidError(e)) {
+        forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
+        return;
+      }
+      setError(UX_MESSAGES.SYNC_ERROR);
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    const allowedTabs = TABS_BY_ROLE[user.role] || ['dashboard', 'tramites'];
+    if (!allowedTabs.includes(activeTab)) {
+      setActiveTab(allowedTabs[0]);
+      setUiMessage(UX_MESSAGES.TAB_REDIRECTED);
+    }
+  }, [user, activeTab]);
+
+  const canAccessTab = (tab: 'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers') => {
+    if (!user) return false;
+    return canAccessTabByRole(user.role, tab);
+  };
+
+  const goToTab = (tab: 'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers') => {
+    if (!canAccessTab(tab)) {
+      setUiMessage(UX_MESSAGES.ACCESS_RESTRICTED);
+      return;
+    }
+    setActiveTab(tab);
   };
 
   // MEMOS DEFENSIVOS: Verifican existencia antes de filtrar
@@ -137,6 +191,67 @@ const App: React.FC = () => {
     { name: 'Rechazados', value: stats.rechazados }
   ];
 
+  const handleLogin = async (matricula: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    setUiMessage(null);
+    try {
+      const logged = await loginWithMatricula(matricula, password);
+      setUser(logged);
+      const allowedTabs = TABS_BY_ROLE[logged.role] || ['dashboard', 'tramites'];
+      setActiveTab(allowedTabs[0]);
+      const data = await dbService.getTramites();
+      setTramites(data || []);
+    } catch (e: any) {
+      setError(e?.message || UX_MESSAGES.LOGIN_GENERIC_ERROR);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logoutSession();
+    setUser(null);
+    setTramites([]);
+    setSelectedTramite(null);
+    setActiveTab('dashboard');
+    setUiMessage('Sesión cerrada correctamente.');
+  };
+
+  const gastoMetrics = useMemo(() => {
+    if (!Array.isArray(tramites)) {
+      return { global: 0, porUnidad: [], porPeriodo: [] };
+    }
+
+    const autorizados = tramites.filter(t => t.estatus === EstatusWorkflow.AUTORIZADO || t.estatus === EstatusWorkflow.ENTREGADO || t.estatus === EstatusWorkflow.CERRADO);
+    const monto = (t: Tramite) => Number(t.importeAutorizado ?? t.importeSolicitado ?? 0);
+
+    const global = autorizados.reduce((acc, t) => acc + monto(t), 0);
+
+    const porUnidadMap = autorizados.reduce((acc: Record<string, number>, t) => {
+      const key = t.unidad || t.beneficiario?.entidadLaboral || 'SIN_UNIDAD';
+      acc[key] = (acc[key] || 0) + monto(t);
+      return acc;
+    }, {});
+
+    const porPeriodoMap = autorizados.reduce((acc: Record<string, number>, t) => {
+      const fecha = new Date(t.fechaValidacionImporte || t.fechaCreacion);
+      const key = `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}`;
+      acc[key] = (acc[key] || 0) + monto(t);
+      return acc;
+    }, {});
+
+    const porUnidad = Object.entries(porUnidadMap)
+      .map(([unidad, total]) => ({ unidad, total }))
+      .sort((a, b) => Number(b.total) - Number(a.total));
+
+    const porPeriodo = Object.entries(porPeriodoMap)
+      .map(([periodo, total]) => ({ periodo, total }))
+      .sort((a, b) => a.periodo.localeCompare(b.periodo));
+
+    return { global, porUnidad, porPeriodo };
+  }, [tramites]);
+
   const handleCreateTramite = async (newTramite: Tramite) => {
     if (!user) return;
     setLoading(true);
@@ -151,13 +266,17 @@ const App: React.FC = () => {
       await loadData();
       setActiveTab('tramites');
     } catch (e: any) {
-      alert("Error al guardar: " + e.message);
+      if (isSessionInvalidError(e)) {
+        forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
+        return;
+      }
+      setUiMessage(e?.message || 'No fue posible guardar el trámite.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateEstatus = async (tramiteId: string, nuevoEstatus: EstatusWorkflow, nota?: string) => {
+  const handleUpdateEstatus = async (tramiteId: string, nuevoEstatus: EstatusWorkflow, nota?: string, importeAutorizado?: number) => {
     if (!user) return;
     setLoading(true);
     try {
@@ -165,22 +284,90 @@ const App: React.FC = () => {
       if (nota) updateData.motivoRechazo = nota;
       
       if (nuevoEstatus === EstatusWorkflow.AUTORIZADO) {
+        if (!canAuthorizeImporte(user.role)) {
+          throw new Error(UX_MESSAGES.UPDATE_STATUS_DENIED);
+        }
+        updateData.importeAutorizado = Number(importeAutorizado || 0);
+        updateData.validadoPor = user.nombre;
+        updateData.fechaValidacionImporte = new Date().toISOString();
         updateData.firmaAutorizacion = `AUTORIZADO ELECTRÓNICAMENTE POR ${user.nombre}`;
         updateData.nombreAutorizador = user.nombre;
       }
 
       await dbService.saveTramite(updateData);
-      await dbService.addBitacora({
-        tramiteId,
-        usuario: user.nombre,
-        accion: 'CAMBIO_ESTATUS',
-        descripcion: `Estatus cambiado a ${nuevoEstatus}.`
-      });
       await loadData();
       const updated = (await dbService.getTramites()).find(t => t.id === tramiteId);
       if (updated) setSelectedTramite(updated);
     } catch (e: any) {
-      alert("Error en actualización.");
+      if (isSessionInvalidError(e)) {
+        forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
+        return;
+      }
+      setUiMessage(e?.message || 'No fue posible actualizar el estatus.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePrintRequest = async (type: PrintDocumentType) => {
+    if (!user || !selectedTramite) return;
+
+    setLoading(true);
+    try {
+      const bitacoraActual = await dbService.getBitacora(selectedTramite.id);
+      const impresionesPrevias = bitacoraActual.filter(
+        (b) => b.categoria === 'IMPRESION' && b.datos?.documento === type
+      ).length;
+
+      const esReimpresion = impresionesPrevias > 0;
+      let motivoReimpresion: string | undefined;
+
+      if (esReimpresion) {
+        const motivo = window.prompt('Este documento ya fue impreso. Captura el motivo de reimpresión (obligatorio):', '');
+        if (!motivo || !motivo.trim()) {
+          alert('La reimpresión requiere motivo obligatorio.');
+          return;
+        }
+        motivoReimpresion = motivo.trim();
+      }
+
+      const fechaAutorizacion = new Date().toISOString();
+      const metadata: PrintMetadata = {
+        folio: selectedTramite.folio,
+        documento: type,
+        emision: esReimpresion ? 'REIMPRESION' : 'ORIGINAL',
+        autorizadoPor: selectedTramite.nombreAutorizador || user.nombre,
+        fechaAutorizacion,
+        motivoReimpresion
+      };
+
+      await dbService.addBitacora({
+        tramiteId: selectedTramite.id,
+        usuario: user.nombre,
+        accion: 'IMPRESION_DOCUMENTO',
+        categoria: 'IMPRESION',
+        descripcion: `${metadata.emision} de ${type.toUpperCase()} registrada para folio ${selectedTramite.folio}.`,
+        datos: metadata
+      });
+
+      await dbService.saveTramite({
+        id: selectedTramite.id,
+        impresiones: {
+          formato: (selectedTramite.impresiones?.formato || 0) + (type === 'formato' ? 1 : 0),
+          tarjeta: (selectedTramite.impresiones?.tarjeta || 0) + (type === 'tarjeta' ? 1 : 0),
+          ultimaFecha: fechaAutorizacion,
+          ultimoUsuario: user.nombre,
+          ultimoMotivoReimpresion: motivoReimpresion
+        }
+      });
+
+      setPrintConfig({ show: true, type, metadata });
+    } catch (e: any) {
+      if (isSessionInvalidError(e)) {
+        forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
+        return;
+      }
+      setUiMessage('No fue posible registrar la impresión en bitácora.');
     } finally {
       setLoading(false);
     }
@@ -210,6 +397,10 @@ const App: React.FC = () => {
     );
   }
 
+  if (!user) {
+    return <LoginView onLogin={handleLogin} loading={loading} error={error} infoMessage={uiMessage} />;
+  }
+
   // VISTA DE IMPRESIÓN (Separada del flujo principal para evitar fugas de memoria)
   if (printConfig.show && selectedTramite) {
     return (
@@ -222,13 +413,14 @@ const App: React.FC = () => {
             <Printer size={16} /> Imprimir Documento
           </button>
         </div>
-        <div className="print-container py-10 bg-slate-100 min-h-screen">
+        <div className="print-stage print-container py-4 bg-slate-100 min-h-screen">
            {printConfig.type === 'formato' ? (
-             <PDFFormatoView tramite={selectedTramite} />
+             <PDFFormatoView tramite={selectedTramite} metadata={printConfig.metadata} />
            ) : (
              <PDFTarjetaControlView 
-               beneficiario={selectedTramite.beneficiario} 
-               dotaciones={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)} 
+               beneficiario={selectedTramite.beneficiario}
+               dotaciones={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
+               metadata={printConfig.metadata}
              />
            )}
         </div>
@@ -238,10 +430,10 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen overflow-hidden bg-white">
+      <div className="app-shell flex flex-col lg:flex-row overflow-hidden bg-white">
         {/* Sidebar */}
-        <aside className="w-64 bg-imss-dark text-imss-light flex flex-col no-print border-r border-white/5">
-          <div className="p-8">
+        <aside className="w-full lg:w-64 bg-imss-dark text-imss-light flex flex-col no-print border-b lg:border-b-0 lg:border-r border-white/5">
+          <div className="p-4 lg:p-8">
             <div className="flex items-center gap-3 text-white mb-2">
               <div className="p-2 bg-imss rounded-xl shadow-lg border border-white/10">
                 <ShieldCheck size={24} className="text-white" />
@@ -254,18 +446,21 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <nav className="flex-1 px-4 space-y-2 mt-6">
-            <SidebarItem icon={<LayoutDashboard size={20} />} label="Tablero" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-            <SidebarItem icon={<Search size={20} />} label="Bandeja" active={activeTab === 'tramites'} onClick={() => setActiveTab('tramites')} />
-            {user?.role === Role.CAPTURISTA_UNIDAD && (
-              <SidebarItem icon={<PlusCircle size={20} />} label="Nueva Captura" active={activeTab === 'nuevo'} onClick={() => setActiveTab('nuevo')} />
+          <nav className="mobile-scroll-x flex-1 px-3 lg:px-4 lg:space-y-2 mt-2 lg:mt-6 flex lg:block gap-2">
+            <SidebarItem icon={<LayoutDashboard size={20} />} label="Tablero" active={activeTab === 'dashboard'} onClick={() => goToTab('dashboard')} />
+            <SidebarItem icon={<Search size={20} />} label="Bandeja" active={activeTab === 'tramites'} onClick={() => goToTab('tramites')} />
+            {canAccessTab('nuevo') && (
+              <SidebarItem icon={<PlusCircle size={20} />} label="Nueva Captura" active={activeTab === 'nuevo'} onClick={() => goToTab('nuevo')} />
             )}
-            {(user?.role === Role.CONSULTA_CENTRAL || user?.role === Role.ADMIN_SISTEMA) && (
-              <SidebarItem icon={<ClipboardCheck size={20} />} label="Central" active={activeTab === 'central'} onClick={() => setActiveTab('central')} />
+            {canAccessTab('central') && (
+              <SidebarItem icon={<ClipboardCheck size={20} />} label="Central" active={activeTab === 'central'} onClick={() => goToTab('central')} />
+            )}
+            {canAccessTab('adminUsers') && (
+              <SidebarItem icon={<Settings size={20} />} label="Usuarios" active={activeTab === 'adminUsers'} onClick={() => goToTab('adminUsers')} />
             )}
           </nav>
 
-          <div className="p-6 border-t border-white/5">
+          <div className="hidden lg:block p-6 border-t border-white/5">
             <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5">
               <div className="w-10 h-10 rounded-full bg-imss flex items-center justify-center text-white font-black border border-imss-gold/40 shadow-inner">
                 {user?.nombre.charAt(0)}
@@ -280,9 +475,9 @@ const App: React.FC = () => {
 
         {/* Main */}
         <main className="flex-1 flex flex-col overflow-hidden no-print bg-[#F9FBFC]">
-          <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-10 shadow-sm z-10">
+          <header className="min-h-20 bg-white border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between px-4 py-4 lg:px-10 shadow-sm z-10 gap-3">
             <div>
-              <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 uppercase tracking-tight">
+              <h2 className="text-base lg:text-xl font-black text-slate-800 flex items-center gap-3 uppercase tracking-tight">
                 <span className="w-1.5 h-8 bg-imss rounded-full"></span>
                 {activeTab === 'dashboard' && 'Resumen Institucional'}
                 {activeTab === 'tramites' && 'Gestión de Trámites'}
@@ -291,13 +486,14 @@ const App: React.FC = () => {
               </h2>
             </div>
             
-            <div className="flex items-center gap-6">
-               <div className="relative group">
+            <div className="flex items-center gap-3 lg:gap-6 w-full lg:w-auto">
+               <div className="relative group flex-1 lg:flex-none">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-imss transition-colors" size={18} />
                 <input 
                   type="text" 
                   placeholder="Buscar NSS o Folio..." 
-                  className="pl-12 pr-6 py-3 bg-slate-50 border-2 border-transparent rounded-[20px] text-sm font-bold focus:bg-white focus:border-imss outline-none w-80 transition-all shadow-inner"
+                  aria-label="Buscar por NSS, folio o nombre"
+                  className="pl-12 pr-6 py-3 bg-slate-50 border-2 border-transparent rounded-[20px] text-sm font-bold focus:bg-white focus:border-imss outline-none w-full lg:w-80 transition-all shadow-inner"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -306,12 +502,18 @@ const App: React.FC = () => {
             </div>
           </header>
 
-          <div className="flex-1 overflow-auto p-10">
-            {user?.id === 'AUTH_CONFIG_REQUIRED' && <AuthErrorBanner />}
-            {activeTab === 'dashboard' && <DashboardView stats={stats} chartData={chartData} />}
-            {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} />}
-            {activeTab === 'nuevo' && <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} />}
-            {activeTab === 'central' && <CentralView tramites={tramites} />}
+          <div className="flex-1 overflow-auto p-4 lg:p-10">
+            {uiMessage && (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 px-5 py-4 text-sm font-bold flex items-center justify-between">
+                <span>{uiMessage}</span>
+                <button className="text-xs uppercase" onClick={() => setUiMessage(null)}>Cerrar</button>
+              </div>
+            )}
+            {activeTab === 'dashboard' && <DashboardView stats={stats} chartData={chartData} gastoMetrics={gastoMetrics} />}
+            {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
+            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} /> : <AccessDeniedView />)}
+            {activeTab === 'central' && (canAccessTab('central') ? <CentralView tramites={tramites} /> : <AccessDeniedView />)}
+            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} /> : <AccessDeniedView />)}
           </div>
         </main>
 
@@ -321,7 +523,7 @@ const App: React.FC = () => {
             user={user!}
             onClose={() => setSelectedTramite(null)} 
             onUpdateEstatus={handleUpdateEstatus}
-            onPrint={(type: 'formato' | 'tarjeta') => setPrintConfig({show: true, type})}
+            onPrint={handlePrintRequest}
             historicalDotations={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
             loading={loading}
           />
@@ -332,33 +534,147 @@ const App: React.FC = () => {
 };
 
 // COMPONENTES AUXILIARES CON GUARDS
-const AuthErrorBanner = () => (
-  <div className="mb-10 p-8 bg-amber-50 border-2 border-amber-200 rounded-[40px] flex items-start gap-6 animate-in slide-in-from-top-4 shadow-xl">
-    <Settings className="text-amber-600 shrink-0" size={40} />
-    <div className="flex-1">
-      <h3 className="font-black text-amber-800 uppercase text-lg tracking-tight mb-2">Error Crítico: Firebase Auth</h3>
-      <p className="text-sm text-amber-700 leading-relaxed font-medium">
-        El proveedor de Inicio de Sesión Anónimo no está habilitado en su consola de Firebase. 
-        Active esta opción en <strong>Authentication > Sign-in method</strong> para habilitar la persistencia en la nube.
-      </p>
-      <button onClick={() => window.location.reload()} className="mt-6 px-10 py-3 bg-amber-600 text-white text-xs font-black uppercase rounded-2xl hover:bg-amber-700 transition-all shadow-lg">Refrescar Conexión</button>
+const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
+  const [matricula, setMatricula] = useState('');
+  const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const handleSubmit = (e: any) => {
+    e.preventDefault();
+    const matriculaNormalized = (matricula || '').trim();
+    const passwordValue = password || '';
+
+    const validationError = validateLoginInput(matriculaNormalized, passwordValue);
+    if (validationError) {
+      setLocalError(validationError);
+      return;
+    }
+
+    setLocalError(null);
+    onLogin(matriculaNormalized, passwordValue);
+  };
+
+  return (
+    <div className="h-screen bg-slate-100 flex items-center justify-center p-4 lg:p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md institutional-card p-6 lg:p-10"
+      >
+        <h1 className="text-2xl font-black text-imss-dark uppercase mb-8">Acceso SISTRA</h1>
+        <label className="field-label">Matrícula</label>
+        <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className="field-input mb-5 uppercase" placeholder="Ej. CAP001" required />
+        <label className="field-label">Contraseña</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="field-input mb-6" placeholder="********" required />
+        {infoMessage && <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm font-bold mb-4">{infoMessage}</p>}
+        {(localError || error) && <p className="text-red-600 text-sm font-bold mb-4">{localError || error}</p>}
+        <button disabled={loading} className="w-full py-4 rounded-xl btn-institutional disabled:opacity-50">
+          {loading ? 'Ingresando...' : 'Iniciar sesión'}
+        </button>
+        <p className="text-[11px] text-slate-500 mt-4">Acceso con Firebase Auth (matrícula + contraseña).</p>
+      </form>
     </div>
+  );
+};
+
+const AdminUsersView = ({ currentUser }: { currentUser: User }) => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [nombre, setNombre] = useState('');
+  const [matricula, setMatricula] = useState('');
+  const [unidad, setUnidad] = useState('');
+  const [ooad, setOoad] = useState('');
+  const [password, setPassword] = useState('');
+  const [resetPasswordByUser, setResetPasswordByUser] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const refresh = async () => setUsuarios(await dbService.getUsers());
+  useEffect(() => { refresh(); }, []);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="bg-white rounded-3xl p-8 border border-slate-100">
+        <h3 className="font-black uppercase mb-6">Alta de Capturista</h3>
+        {feedback && <p className="mb-3 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg px-3 py-2">{feedback}</p>}
+        <div className="space-y-3">
+          <input className="w-full p-3 border rounded-xl" placeholder="Nombre" value={nombre} onChange={(e)=>setNombre(e.target.value)} />
+          <input className="w-full p-3 border rounded-xl" placeholder="Matrícula" value={matricula} onChange={(e)=>setMatricula(e.target.value)} />
+          <input className="w-full p-3 border rounded-xl" placeholder="Unidad" value={unidad} onChange={(e)=>setUnidad(e.target.value)} />
+          <input className="w-full p-3 border rounded-xl" placeholder="OOAD" value={ooad} onChange={(e)=>setOoad(e.target.value)} />
+          <input type="password" className="w-full p-3 border rounded-xl" placeholder="Contraseña inicial" value={password} onChange={(e)=>setPassword(e.target.value)} />
+          <button className="w-full py-3 bg-imss text-white rounded-xl font-black uppercase" onClick={async ()=>{
+            const issues = validatePasswordStrength(password);
+            if (issues.length > 0) {
+              setFeedback(`No se puede crear usuario. ${issues.join(' ')}`);
+              return;
+            }
+            try {
+              await adminCreateCapturista(currentUser, { nombre, matricula, unidad, ooad, password, role: Role.CAPTURISTA_UNIDAD });
+              setNombre('');setMatricula('');setUnidad('');setOoad('');setPassword('');
+              await refresh();
+              setFeedback('Capturista creado correctamente.');
+            } catch (e: any) { setFeedback(e?.message || 'No se pudo crear el capturista.'); }
+          }}>Crear capturista</button>
+        </div>
+      </div>
+      <div className="bg-white rounded-3xl p-8 border border-slate-100">
+        <h3 className="font-black uppercase mb-6">Reset administrativo</h3>
+        <div className="space-y-3 max-h-[500px] overflow-auto">
+          {usuarios.map((u) => (
+            <div key={u.id} className="border rounded-xl p-3">
+              <p className="font-black text-sm">{u.nombre} · {u.matricula}</p>
+              <p className="text-xs text-slate-500">{u.role} · {u.unidad} · {u.activo ? 'ACTIVO' : 'INACTIVO'}</p>
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="password"
+                  className="flex-1 p-2 border rounded-lg"
+                  placeholder="Nueva contraseña"
+                  value={resetPasswordByUser[u.id] || ''}
+                  onChange={(e)=>setResetPasswordByUser(prev => ({ ...prev, [u.id]: e.target.value }))}
+                />
+                <button className="px-3 bg-slate-800 text-white rounded-lg text-xs" onClick={async ()=>{
+                  const candidate = (resetPasswordByUser[u.id] || '').trim();
+                  const issues = validatePasswordStrength(candidate);
+                  if (issues.length > 0) {
+                    setFeedback(`No se pudo resetear a ${u.matricula}. ${issues.join(' ')}`);
+                    return;
+                  }
+                  try {
+                    await adminResetPassword(currentUser, u.id, candidate);
+                    setResetPasswordByUser(prev => ({ ...prev, [u.id]: '' }));
+                    setFeedback(`Correo de restablecimiento enviado para ${u.matricula}.`);
+                  }
+                  catch(e:any){ setFeedback(e?.message || 'No se pudo resetear la contraseña.'); }
+                }}>Reset</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AccessDeniedView = () => (
+  <div className="bg-white rounded-3xl border border-red-100 p-10 text-center">
+    <AlertTriangle className="mx-auto text-red-500 mb-4" />
+    <p className="font-black text-slate-700 uppercase text-sm">No tienes permisos para ver esta sección.</p>
+    <p className="text-xs text-slate-500 mt-2">Si consideras que es un error, contacta al administrador del sistema.</p>
   </div>
 );
 
 const SidebarItem = ({ icon, label, active, onClick }: any) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-all ${active ? 'bg-imss text-white shadow-xl' : 'hover:bg-white/5 text-imss-light/50 hover:text-white'}`}>
+  <button onClick={onClick} className={`w-auto lg:w-full whitespace-nowrap flex items-center gap-3 px-4 lg:px-5 py-3 lg:py-4 rounded-2xl text-xs lg:text-sm font-black uppercase tracking-widest transition-all ${active ? 'bg-imss text-white shadow-xl' : 'hover:bg-white/5 text-imss-light/60 hover:text-white'}`}>
     {icon}{label}
   </button>
 );
 
-const DashboardView = ({ stats, chartData }: any) => (
+const DashboardView = ({ stats, chartData, gastoMetrics }: any) => (
   <div className="space-y-10 animate-in fade-in duration-700">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
       <StatCard label="Total Cloud" value={stats.total} icon={<FileText className="text-imss" />} color="imss" />
       <StatCard label="Por Validar" value={stats.pendientes} icon={<Clock className="text-amber-600" />} color="amber" />
       <StatCard label="Autorizados" value={stats.autorizados} icon={<CheckCircle2 className="text-emerald-600" />} color="emerald" />
       <StatCard label="Entregados" value={stats.entregados} icon={<LogOut className="text-slate-600" />} color="slate" />
+      <StatCard label="Gasto Global" value={`$${Number(gastoMetrics.global || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon={<DollarSign className="text-imss" />} color="imss" />
     </div>
     
     <div className="bg-white p-12 rounded-[50px] border border-slate-100 shadow-sm min-h-[500px] flex flex-col">
@@ -381,6 +697,11 @@ const DashboardView = ({ stats, chartData }: any) => (
           </ResponsiveContainer>
        </div>
     </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <SimpleSpendTable title="Gasto por Unidad" rows={(gastoMetrics.porUnidad || []).map((x: any) => ({ label: x.unidad, value: x.total }))} />
+      <SimpleSpendTable title="Gasto por Periodo" rows={(gastoMetrics.porPeriodo || []).map((x: any) => ({ label: x.periodo, value: x.total }))} />
+    </div>
   </div>
 );
 
@@ -397,15 +718,33 @@ const StatCard = ({ label, value, icon, color }: any) => {
   );
 };
 
-const TramitesListView = ({ tramites, onSelect }: any) => (
-  <div className="bg-white rounded-[50px] shadow-sm border border-slate-100 overflow-hidden animate-in slide-in-from-bottom-6 duration-500">
-    <table className="w-full text-left border-collapse">
+const SimpleSpendTable = ({ title, rows }: any) => (
+  <div className="bg-white rounded-[40px] border border-slate-100 p-8">
+    <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-6">{title}</h4>
+    <div className="space-y-3 max-h-64 overflow-auto">
+      {rows.length ? rows.map((row: any, idx: number) => (
+        <div key={`${row.label}-${idx}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+          <span className="text-xs font-black uppercase text-slate-600">{row.label}</span>
+          <span className="text-xs font-black text-imss">${Number(row.value || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+      )) : (
+        <p className="text-xs text-slate-400 font-bold">Sin datos de gasto.</p>
+      )}
+    </div>
+  </div>
+);
+
+const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
+  <div className="institutional-card rounded-[28px] lg:rounded-[50px] overflow-hidden animate-in slide-in-from-bottom-6 duration-500" aria-live="polite">
+    <div className="mobile-scroll-x">
+    <table className="w-full min-w-[760px] text-left border-collapse">
+      <caption className="sr-only">Bandeja de trámites</caption>
       <thead className="bg-imss-dark">
         <tr>
-          <th className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Identificador</th>
-          <th className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Solicitante</th>
-          <th className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-center">Estatus Cloud</th>
-          <th className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">Acción</th>
+          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Identificador</th>
+          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Solicitante</th>
+          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-center">Estatus Cloud</th>
+          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">Acción</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-50">
@@ -425,24 +764,28 @@ const TramitesListView = ({ tramites, onSelect }: any) => (
               </span>
             </td>
             <td className="px-10 py-8 text-right">
-              <button className="p-4 bg-slate-100 rounded-2xl text-slate-400 group-hover:bg-imss group-hover:text-white transition-all shadow-sm">
+              <button aria-label={`Abrir detalle del folio ${t.folio}`} className="p-4 bg-slate-100 rounded-2xl text-slate-400 group-hover:bg-imss group-hover:text-white transition-all shadow-sm">
                 <ChevronRight size={20} />
               </button>
             </td>
           </tr>
         )) : (
           <tr>
-            <td colSpan={4} className="px-10 py-32 text-center text-slate-300 font-black uppercase tracking-[0.3em] opacity-40">Sin registros sincronizados</td>
+            <td colSpan={4} className="px-10 py-32 text-center text-slate-400 font-black uppercase tracking-[0.2em]">
+              {searchTerm ? `Sin coincidencias para "${searchTerm}".` : 'Sin registros sincronizados'}
+            </td>
           </tr>
         )}
       </tbody>
     </table>
+    </div>
   </div>
 );
 
 const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, historicalDotations, loading }: any) => {
   const [activeTab, setActiveTab] = useState<'info' | 'bitacora' | 'tarjeta'>('info');
   const [bitacora, setBitacora] = useState<Bitacora[]>([]);
+  const [importeAutorizado, setImporteAutorizado] = useState<number>(Number(tramite.importeAutorizado ?? tramite.importeSolicitado ?? 0));
 
   useEffect(() => {
     let isMounted = true;
@@ -458,12 +801,20 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
     return () => { isMounted = false; };
   }, [tramite.id]);
 
-  const canApprove = (user.role === Role.VALIDADOR_PRESTACIONES || user.role === Role.ADMIN_SISTEMA) && tramite.estatus === EstatusWorkflow.EN_REVISION_DOCUMENTAL;
+  const canApprove = canAuthorizeImporte(user.role) && tramite.estatus === EstatusWorkflow.EN_REVISION_DOCUMENTAL;
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-imss-dark/80 backdrop-blur-xl z-50 flex items-center justify-center p-8 animate-in fade-in duration-300">
-       <div className="bg-white rounded-[60px] w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
-          <div className="px-12 py-10 bg-imss-dark text-white flex justify-between items-center shrink-0 border-b border-imss-gold/20">
+    <div className="fixed inset-0 bg-imss-dark/80 backdrop-blur-xl z-50 flex items-center justify-center p-2 lg:p-8 animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-label={`Detalle del trámite ${tramite.folio}`}>
+       <div className="bg-white rounded-3xl lg:rounded-[60px] w-full max-w-6xl h-[96vh] lg:h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
+          <div className="px-4 py-4 lg:px-12 lg:py-10 bg-imss-dark text-white flex flex-col lg:flex-row justify-between lg:items-center shrink-0 border-b border-imss-gold/20 gap-3">
              <div>
                <div className="flex items-center gap-6">
                  <h2 className="text-4xl font-black tracking-tighter">{tramite.folio}</h2>
@@ -474,10 +825,10 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                <p className="text-imss-gold font-black text-[10px] uppercase tracking-[0.3em] mt-3">SISTRA ID: {tramite.id}</p>
              </div>
              <div className="flex items-center gap-4">
-               <button onClick={() => onPrint('formato')} className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5">
+               <button onClick={() => onPrint('formato')} disabled={tramite.estatus !== EstatusWorkflow.AUTORIZADO && tramite.estatus !== EstatusWorkflow.ENTREGADO && tramite.estatus !== EstatusWorkflow.CERRADO} title="Solo disponible para trámites autorizados" className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5 disabled:opacity-40 disabled:cursor-not-allowed">
                  <Printer size={20} className="text-imss-gold" /> Formato 027
                </button>
-               <button onClick={() => onPrint('tarjeta')} className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5">
+               <button onClick={() => onPrint('tarjeta')} disabled={tramite.estatus !== EstatusWorkflow.AUTORIZADO && tramite.estatus !== EstatusWorkflow.ENTREGADO && tramite.estatus !== EstatusWorkflow.CERRADO} title="Solo disponible para trámites autorizados" className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5 disabled:opacity-40 disabled:cursor-not-allowed">
                  <CreditCard size={20} className="text-imss-gold" /> Tarjeta 028
                </button>
                <button onClick={onClose} className="p-4 bg-white/5 hover:bg-white/20 rounded-2xl text-white/40 hover:text-white transition-all">
@@ -486,15 +837,20 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
              </div>
           </div>
 
-          <div className="flex border-b border-slate-100 bg-slate-50 px-12">
+          <div className="mobile-scroll-x flex border-b border-slate-100 bg-slate-50 px-2 lg:px-12">
              <TabButton label="Información General" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
              <TabButton label="Historial Institucional" active={activeTab === 'tarjeta'} onClick={() => setActiveTab('tarjeta')} />
              <TabButton label="Bitácora Cloud" active={activeTab === 'bitacora'} onClick={() => setActiveTab('bitacora')} />
           </div>
 
-          <div className="flex-1 overflow-auto p-12 bg-white">
+          <div className="flex-1 overflow-auto p-4 lg:p-12 bg-white">
+            {tramite.estatus !== EstatusWorkflow.AUTORIZADO && tramite.estatus !== EstatusWorkflow.ENTREGADO && tramite.estatus !== EstatusWorkflow.CERRADO && (
+              <div className="mb-8 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-black uppercase tracking-wider">
+                La impresión se habilita al autorizar el trámite.
+              </div>
+            )}
             {activeTab === 'info' && (
-              <div className="grid grid-cols-2 gap-12">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
                 <div className="space-y-10">
                   <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 shadow-inner">
                     <h4 className="text-[11px] font-black text-slate-400 uppercase mb-8 tracking-[0.2em]">Cédula del Beneficiario</h4>
@@ -508,21 +864,51 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                   </div>
                 </div>
                 <div className="space-y-10">
-                   <div className="p-10 bg-imss-light/30 rounded-[40px] border border-imss/10">
-                    <h4 className="text-[11px] font-black text-imss/50 uppercase mb-8 tracking-[0.2em]">Gestión de Validación</h4>
+                   <div className="p-10 bg-imss-light/30 rounded-[40px] border border-imss/10 space-y-6">
+                    <h4 className="text-[11px] font-black text-imss/50 uppercase tracking-[0.2em]">Gestión de Importe y Validación</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white rounded-2xl p-4 border border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase">Importe solicitado</p>
+                        <p className="text-lg font-black text-slate-700">${Number(tramite.importeSolicitado || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      </div>
+                      <div className="bg-white rounded-2xl p-4 border border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase">Importe autorizado</p>
+                        <p className="text-lg font-black text-imss">${Number(tramite.importeAutorizado ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      </div>
+                    </div>
+
                     {canApprove ? (
-                      <button 
-                        disabled={loading} 
-                        onClick={() => onUpdateEstatus(tramite.id, EstatusWorkflow.AUTORIZADO)} 
-                        className="w-full py-6 bg-imss text-white font-black uppercase text-xs tracking-widest rounded-[24px] hover:bg-imss-dark shadow-2xl disabled:opacity-50 transition-all flex items-center justify-center gap-4"
-                      >
-                        {loading ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
-                        {loading ? 'SINCRONIZANDO...' : 'FIRMAR Y AUTORIZAR'}
-                      </button>
+                      <>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Monto a autorizar (solo admin)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={importeAutorizado}
+                            onChange={(e) => setImporteAutorizado(Number(e.target.value || 0))}
+                            className="w-full p-4 rounded-2xl border-2 border-slate-200 font-black text-imss"
+                          />
+                        </div>
+                        <button 
+                          disabled={loading || importeAutorizado < 0} 
+                          onClick={() => onUpdateEstatus(tramite.id, EstatusWorkflow.AUTORIZADO, undefined, importeAutorizado)} 
+                          className="w-full py-6 bg-imss text-white font-black uppercase text-xs tracking-widest rounded-[24px] hover:bg-imss-dark shadow-2xl disabled:opacity-50 transition-all flex items-center justify-center gap-4"
+                        >
+                          {loading ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
+                          {loading ? 'SINCRONIZANDO...' : 'VALIDAR IMPORTE Y AUTORIZAR'}
+                        </button>
+                      </>
                     ) : (
                       <div className="flex items-center gap-4 text-slate-400 bg-white p-6 rounded-2xl border border-slate-100">
                         <AlertTriangle size={20} />
-                        <p className="text-[10px] font-black uppercase tracking-widest">La firma electrónica solo está disponible para validadores autorizados.</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Solo ADMIN_SISTEMA puede validar y autorizar importes.</p>
+                      </div>
+                    )}
+
+                    {(tramite.validadoPor || tramite.fechaValidacionImporte) && (
+                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white p-4 rounded-2xl border border-slate-100">
+                        Validado por: {tramite.validadoPor || 'N/A'} · Fecha: {tramite.fechaValidacionImporte ? new Date(tramite.fechaValidacionImporte).toLocaleString() : 'N/A'}
                       </div>
                     )}
                   </div>
@@ -538,7 +924,15 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
                         <p className="font-black text-imss-dark text-sm uppercase">{b.accion}</p>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(b.fecha).toLocaleString()}</p>
                       </div>
-                      <p className="text-sm text-slate-600 font-medium leading-relaxed mb-4">{b.descripcion}</p>
+                      <p className="text-sm text-slate-600 font-medium leading-relaxed mb-2">{b.descripcion}</p>
+                      {b.categoria && (
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Categoría: {b.categoria}</p>
+                      )}
+                      {b.datos?.folio && (
+                        <p className="text-[10px] font-bold text-slate-500 mb-4">
+                          Folio: {b.datos.folio} · Emisión: {b.datos.emision || 'N/A'} · Documento: {b.datos.documento || 'N/A'}
+                        </p>
+                      )}
                       <div className="pt-4 border-t border-slate-200 flex items-center gap-2">
                          <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[8px] font-black">{b.usuario?.charAt(0)}</div>
                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Operador Cloud: {b.usuario}</p>
@@ -584,11 +978,12 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onPrint, 
 };
 
 const TabButton = ({ label, active, onClick }: any) => (
-  <button onClick={onClick} className={`px-10 py-5 text-[10px] font-black uppercase tracking-widest transition-all border-b-4 ${active ? 'border-imss text-imss bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>{label}</button>
+  <button onClick={onClick} className={`whitespace-nowrap px-4 lg:px-10 py-4 lg:py-5 text-[10px] font-black uppercase tracking-widest transition-all border-b-4 ${active ? 'border-imss text-imss bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>{label}</button>
 );
 
 const NuevoTramiteWizard = ({ user, onSave }: any) => {
   const [step, setStep] = useState(1);
+  const [stepError, setStepError] = useState<string>('');
   const [beneficiario, setBeneficiario] = useState<any>({
     tipo: TipoBeneficiario.TRABAJADOR,
     nombre: '',
@@ -598,9 +993,40 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     entidadLaboral: user.unidad,
     ooad: user.ooad
   });
-  const [receta, setReceta] = useState({ folio: '', descripcion: '', dotacionNo: 1 });
+  const [receta, setReceta] = useState({ folio: '', descripcion: '', dotacionNo: 1, importeSolicitado: 0 });
+
+  const validateStep1 = () => {
+    return validateNuevoTramiteStep1({
+      nombre: beneficiario.nombre,
+      nssTrabajador: beneficiario.nssTrabajador
+    });
+  };
+
+  const validateStep2 = () => {
+    return validateNuevoTramiteStep2({
+      folioRecetaImss: receta.folio,
+      descripcionLente: receta.descripcion,
+      importeSolicitado: Number(receta.importeSolicitado || 0)
+    });
+  };
+
+  const goToStep = (targetStep: number) => {
+    const validationError = step === 1 ? validateStep1() : step === 2 ? validateStep2() : '';
+    if (targetStep > step && validationError) {
+      setStepError(validationError);
+      return;
+    }
+    setStepError('');
+    setStep(targetStep);
+  };
 
   const handleFinalize = () => {
+    const validationError = validateStep2();
+    if (validationError) {
+      setStepError(validationError);
+      setStep(2);
+      return;
+    }
     const tramite: Tramite = {
       id: '', 
       folio: generateFolio(user.unidad, Math.floor(Math.random() * 1000)),
@@ -611,6 +1037,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       estatus: EstatusWorkflow.EN_REVISION_DOCUMENTAL,
       dotacionNumero: receta.dotacionNo,
       requiereDictamenMedico: receta.dotacionNo >= 3,
+      importeSolicitado: Number(receta.importeSolicitado || 0),
       folioRecetaImss: receta.folio,
       fechaExpedicionReceta: new Date().toISOString(),
       descripcionLente: receta.descripcion,
@@ -636,34 +1063,43 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
          ))}
       </div>
       <div className="p-20">
+        {stepError && (
+          <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold" role="alert">
+            {stepError}
+          </div>
+        )}
         {step === 1 && (
           <div className="space-y-10 animate-in slide-in-from-right-8 duration-500">
              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                <div className="md:col-span-2">
                  <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Nombre del Beneficiario</label>
-                 <input placeholder="NOMBRE COMPLETO" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={beneficiario.nombre} onChange={(e) => setBeneficiario({...beneficiario, nombre: e.target.value})} />
+                 <input placeholder="NOMBRE COMPLETO" aria-label="Nombre del beneficiario" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={beneficiario.nombre} onChange={(e) => { setStepError(''); setBeneficiario({...beneficiario, nombre: e.target.value}); }} />
                </div>
                <div>
                  <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">NSS Institucional</label>
-                 <input placeholder="0000000000" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black text-imss text-xl tracking-[0.2em] shadow-inner" value={beneficiario.nssTrabajador} onChange={(e) => setBeneficiario({...beneficiario, nssTrabajador: e.target.value})} />
+                 <input placeholder="0000000000" aria-label="NSS institucional" inputMode="numeric" maxLength={11} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black text-imss text-xl tracking-[0.2em] shadow-inner" value={beneficiario.nssTrabajador} onChange={(e) => { setStepError(''); setBeneficiario({...beneficiario, nssTrabajador: e.target.value.replace(/\D/g, '')}); }} />
                </div>
              </div>
-             <button onClick={() => setStep(2)} className="w-full py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>
+             <button onClick={() => goToStep(2)} className="w-full py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>
           </div>
         )}
         {step === 2 && (
           <div className="space-y-10 animate-in slide-in-from-right-8 duration-500">
              <div>
                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Folio de Receta 1A14</label>
-               <input placeholder="FOLIO RECETA" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.folio} onChange={(e) => setReceta({...receta, folio: e.target.value})} />
+               <input placeholder="FOLIO RECETA" aria-label="Folio de receta" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.folio} onChange={(e) => { setStepError(''); setReceta({...receta, folio: e.target.value}); }} />
              </div>
              <div>
                <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Diagnóstico y Especificación</label>
-               <textarea placeholder="DESCRIBA LA GRADUACIÓN..." className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => setReceta({...receta, descripcion: e.target.value})} />
+               <textarea placeholder="DESCRIBA LA GRADUACIÓN..." aria-label="Diagnóstico y especificación" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl h-44 outline-none focus:border-imss transition-all font-bold uppercase text-slate-800 shadow-inner" value={receta.descripcion} onChange={(e) => { setStepError(''); setReceta({...receta, descripcion: e.target.value}); }} />
+             </div>
+             <div>
+               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Importe Solicitado (MXN)</label>
+               <input type="number" min={0} step="0.01" placeholder="0.00" aria-label="Importe solicitado" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black text-imss text-xl shadow-inner" value={receta.importeSolicitado} onChange={(e) => { setStepError(''); setReceta({...receta, importeSolicitado: Number(e.target.value || 0)}); }} />
              </div>
              <div className="flex gap-6">
-               <button onClick={() => setStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
-               <button onClick={() => setStep(3)} className="flex-1 py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>
+               <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
+               <button onClick={() => goToStep(3)} className="flex-1 py-7 bg-imss text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all">Siguiente Fase</button>
              </div>
           </div>
         )}
@@ -675,7 +1111,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
             <h3 className="text-4xl font-black text-slate-800 uppercase mb-6 tracking-tighter">Validación de Registro</h3>
             <p className="text-slate-500 mb-14 max-w-md mx-auto font-medium leading-relaxed uppercase text-xs tracking-widest">La solicitud será firmada digitalmente y sincronizada con el servidor central de prestaciones.</p>
             <div className="flex gap-6">
-               <button onClick={() => setStep(2)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
+               <button onClick={() => goToStep(2)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
                <button onClick={handleFinalize} className="flex-1 py-7 bg-imss-dark text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition-all">Sincronizar Solicitud</button>
             </div>
           </div>
@@ -701,3 +1137,10 @@ const CentralView = ({ tramites }: any) => (
 );
 
 export default App;
+
+
+
+
+
+
+

@@ -1,146 +1,127 @@
-
 import React from 'react';
 import { Tramite, TipoBeneficiario } from '../types';
 
 interface PDFTarjetaControlViewProps {
   beneficiario: any;
   dotaciones: Tramite[];
+  metadata?: {
+    folio: string;
+    emision: 'ORIGINAL' | 'REIMPRESION';
+    autorizadoPor: string;
+    fechaAutorizacion: string;
+    motivoReimpresion?: string;
+  };
 }
 
-export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ beneficiario: b, dotaciones }) => {
-  const getDotacionData = (num: number) => {
-    return dotaciones.find(d => d.dotacionNumero === num);
-  };
+const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString('es-MX') : '');
+const formatDateTime = (value?: string) => (value ? new Date(value).toLocaleString('es-MX') : 'N/A');
+
+export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ beneficiario: b, dotaciones, metadata }) => {
+  const getDotacionData = (num: number) => dotaciones.find(d => d.dotacionNumero === num);
 
   const checkbox = (checked: boolean) => (
-    <div className={`w-10 h-10 border-2 border-black flex items-center justify-center font-black text-xl bg-white`}>
-      {checked ? 'X' : ''}
-    </div>
+    <div className="w-6 h-6 border border-black flex items-center justify-center text-xs font-black">{checked ? 'X' : ''}</div>
   );
 
-  const DotacionColumn = ({ num, label }: { num: number, label: string }) => {
+  const emision = metadata?.emision || 'ORIGINAL';
+
+  const DotacionColumn = ({ num, label }: { num: number; label: string }) => {
     const data = getDotacionData(num);
     return (
-      <div className="flex flex-col border-r-2 border-black last:border-r-0">
-        <div className="bg-white p-1 text-center font-bold border-b-2 border-black text-sm uppercase">{label}</div>
-        <div className="flex-1 flex flex-col divide-y-2 divide-black">
-          <div className="h-10 flex items-center justify-center font-bold">{data?.folioRecetaImss || ''}</div>
-          <div className="h-16 flex items-center justify-center px-1 text-center text-[10px] font-bold leading-tight uppercase">
-            {data?.descripcionLente || ''}
-          </div>
-          <div className="h-10 flex items-center justify-center font-bold">{data?.folio || ''}</div>
-          <div className="h-10 flex items-center justify-center font-bold">
-            {data?.fechaCreacion ? new Date(data.fechaCreacion).toLocaleDateString() : ''}
-          </div>
-          <div className="h-10 flex items-center justify-center font-bold">{data?.qnaInclusion || ''}</div>
-          <div className="h-20 flex flex-col items-center justify-end pb-1 overflow-hidden">
-             <span className="text-[9px] text-center font-bold uppercase truncate w-full px-1">{data?.beneficiario.nombre ? `${data.beneficiario.nombre} ${data.beneficiario.apellidoPaterno}` : ''}</span>
-          </div>
+      <div className="flex flex-col border-r border-black last:border-r-0">
+        <div className="p-1 text-center font-bold border-b border-black text-[9px]">{label}</div>
+        <div className="flex-1 flex flex-col divide-y divide-black text-[9px]">
+          <div className="h-8 flex items-center justify-center font-bold px-1 text-center">{data?.folioRecetaImss || ''}</div>
+          <div className="h-12 flex items-center justify-center px-1 text-center font-bold leading-tight">{data?.descripcionLente || ''}</div>
+          <div className="h-8 flex items-center justify-center font-bold px-1 text-center">{data?.folio || ''}</div>
+          <div className="h-8 flex items-center justify-center font-bold">{formatDate(data?.fechaCreacion)}</div>
+          <div className="h-8 flex items-center justify-center font-bold">{data?.qnaInclusion || ''}</div>
+          <div className="h-14 flex items-end justify-center pb-1 px-1 text-center text-[8px] font-bold">{data?.beneficiario?.nombre ? `${data.beneficiario.nombre} ${data.beneficiario.apellidoPaterno}` : ''}</div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="bg-white p-10 w-[215.9mm] min-h-[279.4mm] mx-auto text-[11px] font-sans uppercase print-container text-black border border-gray-100 shadow-xl">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex gap-4 items-center">
-          <div className="w-16 h-16">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/7/74/IMSS_Logo.svg" alt="IMSS" className="w-full" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold">TARJETA DE CONTROL DE DOTACIÓN DE ANTEOJOS</h1>
-            <div className="flex gap-2 items-baseline">
-              <span className="font-bold">OOAD:</span>
-              <span className="border-b-2 border-black min-w-[200px] font-bold text-sm">{b.ooad || '03 - BAJA CALIFORNIA SUR'}</span>
-            </div>
-            <p className="font-bold mt-1">Jefatura de Servicios de Desarrollo de Personal</p>
+    <div className="print-sheet-letter print-container p-[8mm] text-[10px] font-sans uppercase text-black leading-tight">
+      <div className="border border-black p-2 mb-3 text-[9px] bg-white">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <p><strong>Folio de control:</strong> {metadata?.folio || dotaciones[0]?.folio || 'N/A'}</p>
+          <p><strong>Emisión:</strong> {emision}</p>
+          <p><strong>Autorizó impresión:</strong> {metadata?.autorizadoPor || dotaciones[0]?.nombreAutorizador || 'N/A'}</p>
+          <p><strong>Fecha/Hora:</strong> {formatDateTime(metadata?.fechaAutorizacion)}</p>
+        </div>
+        {emision === 'REIMPRESION' && (
+          <p className="mt-1 font-bold text-red-700"><strong>Motivo reimpresión:</strong> {metadata?.motivoReimpresion || 'N/A'}</p>
+        )}
+      </div>
+
+      <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
+        <div className="flex gap-3 items-center">
+          <div className="w-12 h-12"><img src="https://upload.wikimedia.org/wikipedia/commons/7/74/IMSS_Logo.svg" alt="IMSS" className="w-full h-full object-contain" /></div>
+          <div>
+            <h1 className="text-[12px] font-black">Tarjeta de Control de Dotación de Anteojos</h1>
+            <div className="flex gap-2 items-baseline text-[9px]"><span className="font-bold">OOAD:</span><span className="border-b border-black min-w-[160px] font-bold">{b.ooad || 'N/A'}</span></div>
+            <p className="font-bold text-[9px]">Jefatura de Servicios de Desarrollo de Personal</p>
           </div>
         </div>
-        <div className="flex gap-2 items-baseline">
-          <span className="font-bold">MATRÍCULA:</span>
-          <span className="border-b-2 border-black min-w-[150px] text-center font-black text-lg">{b.matricula}</span>
+        <div className="text-right">
+          <p className="font-bold">Matrícula</p>
+          <div className="border-b border-black min-w-[140px] text-center font-black text-sm">{b.matricula || 'N/A'}</div>
         </div>
       </div>
 
-      <div className="mt-6 mb-6">
-        <p className="font-bold mb-4">SE AUTORIZA LA DOTACIÓN DE ANTEOJOS A LA PERSONA:</p>
-        <div className="flex justify-between px-4">
-          <div className="flex items-center gap-4">
-            {checkbox(b.tipo === TipoBeneficiario.TRABAJADOR)}
-            <span className="font-bold">TRABAJADORA</span>
-          </div>
-          <div className="flex items-center gap-4">
-            {checkbox(b.tipo === TipoBeneficiario.JUBILADO_PENSIONADO)}
-            <span className="font-bold">JUBILADA</span>
-          </div>
-          <div className="flex items-center gap-4">
-            {checkbox(b.tipo === TipoBeneficiario.PENSIONADA)}
-            <span className="font-bold">PENSIONADA</span>
-          </div>
-          <div className="flex items-center gap-4">
-            {checkbox(b.tipo === TipoBeneficiario.HIJO)}
-            <span className="font-bold">BENEFICIARIO (A)</span>
-          </div>
+      <div className="mb-3">
+        <p className="font-bold mb-1">Se autoriza la dotación de anteojos a la persona:</p>
+        <div className="flex justify-between text-[9px] gap-3">
+          <div className="flex items-center gap-1">{checkbox(b.tipo === TipoBeneficiario.TRABAJADOR)}<span className="font-bold">Trabajadora</span></div>
+          <div className="flex items-center gap-1">{checkbox(b.tipo === TipoBeneficiario.JUBILADO_PENSIONADO)}<span className="font-bold">Jubilada</span></div>
+          <div className="flex items-center gap-1">{checkbox(b.tipo === TipoBeneficiario.PENSIONADA)}<span className="font-bold">Pensionada</span></div>
+          <div className="flex items-center gap-1">{checkbox(b.tipo === TipoBeneficiario.HIJO)}<span className="font-bold">Beneficiario(a)</span></div>
         </div>
       </div>
 
-      <div className="space-y-4 mb-8">
-        <div className="flex gap-2 items-baseline">
-          <span className="font-bold min-w-[150px]">NOMBRE (S):</span>
-          <span className="border-b-2 border-black flex-1 font-black text-lg">{`${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`}</span>
+      <div className="space-y-2 mb-3 text-[9px]">
+        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Nombre(s):</span><span className="border-b border-black flex-1 font-black">{`${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`}</span></div>
+        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[250px]">Nombre(s) de la hija o hijo de la persona trabajadora:</span><span className="border-b border-black flex-1 font-bold">{b.tipo === TipoBeneficiario.HIJO ? b.nombre : 'N/A'}</span></div>
+        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Adscripción:</span><span className="border-b border-black flex-1 font-bold">{b.entidadLaboral || 'N/A'}</span></div>
+      </div>
+
+      <div className="border-2 border-black flex mb-3">
+        <div className="w-[27%] flex flex-col border-r border-black divide-y divide-black font-bold text-[9px]">
+          <div className="h-7" />
+          <div className="h-8 flex items-center px-2">Receta No.</div>
+          <div className="h-12 flex items-center px-2">Tipo de anteojos</div>
+          <div className="h-8 flex items-center px-2">Folio</div>
+          <div className="h-8 flex items-center px-2">Fecha</div>
+          <div className="h-8 flex items-center px-2">Qna/Mes inclusión</div>
+          <div className="h-14 flex items-start px-2 py-1 text-[8px] leading-tight">Firma de la persona trabajadora, jubilada o pensionada</div>
         </div>
-        <div className="flex gap-2 items-baseline">
-          <span className="font-bold min-w-[280px]">NOMBRE (S) DE LA HIJA O HIJO DE LA PERSONA TRABAJADORA:</span>
-          <span className="border-b-2 border-black flex-1 font-bold">{b.tipo === TipoBeneficiario.HIJO ? b.nombre : 'N/A'}</span>
-        </div>
-        <div className="flex gap-2 items-baseline">
-          <span className="font-bold min-w-[150px]">ADSCRIPCIÓN:</span>
-          <span className="border-b-2 border-black flex-1 font-bold text-lg">{b.entidadLaboral}</span>
+        <div className="flex-1 grid grid-cols-2">
+          <DotacionColumn num={1} label="Primera dotación" />
+          <DotacionColumn num={2} label="Segunda dotación" />
         </div>
       </div>
 
-      {/* Grid Top Part */}
       <div className="border-2 border-black flex">
-        <div className="w-1/4 flex flex-col border-r-2 border-black divide-y-2 divide-black font-bold">
-           <div className="h-8 bg-white"></div>
-           <div className="h-10 flex items-center px-2">RECETA N°</div>
-           <div className="h-16 flex items-center px-2">TIPO DE ANTEOJOS</div>
-           <div className="h-10 flex items-center px-2">FOLIO</div>
-           <div className="h-10 flex items-center px-2">FECHA</div>
-           <div className="h-10 flex items-center px-2">QNA/MES DE INCLUSIÓN</div>
-           <div className="h-20 flex items-start px-2 py-1 text-[9px] leading-tight">
-             FIRMA DE LA PERSONA TRABAJADORA JUBILADA O PENSIONADA
-           </div>
+        <div className="w-[27%] flex flex-col border-r border-black divide-y divide-black font-bold text-[9px]">
+          <div className="h-7" />
+          <div className="h-8 flex items-center px-2">Receta No.</div>
+          <div className="h-12 flex items-center px-2">Tipo de anteojos</div>
+          <div className="h-8 flex items-center px-2">Folio</div>
+          <div className="h-8 flex items-center px-2">Fecha</div>
+          <div className="h-8 flex items-center px-2">Qna/Mes inclusión</div>
+          <div className="h-14 flex items-start px-2 py-1 text-[8px] leading-tight">Firma de la persona trabajadora, jubilada o pensionada</div>
         </div>
         <div className="flex-1 grid grid-cols-2">
-          <DotacionColumn num={1} label="PRIMERA DOTACIÓN" />
-          <DotacionColumn num={2} label="SEGUNDA DOTACIÓN" />
+          <DotacionColumn num={3} label="Tercera dotación" />
+          <DotacionColumn num={4} label="Cuarta dotación" />
         </div>
       </div>
 
-      {/* Grid Bottom Part */}
-      <div className="border-2 border-black mt-6 flex">
-        <div className="w-1/4 flex flex-col border-r-2 border-black divide-y-2 divide-black font-bold">
-           <div className="h-8 bg-white"></div>
-           <div className="h-10 flex items-center px-2">RECETA N°</div>
-           <div className="h-16 flex items-center px-2">TIPO DE ANTEOJOS</div>
-           <div className="h-10 flex items-center px-2">FOLIO</div>
-           <div className="h-10 flex items-center px-2">FECHA</div>
-           <div className="h-10 flex items-center px-2">QNA/MES DE INCLUSIÓN</div>
-           <div className="h-20 flex items-start px-2 py-1 text-[9px] leading-tight">
-             FIRMA DE LA PERSONA TRABAJADORA JUBILADA O PENSIONADA
-           </div>
-        </div>
-        <div className="flex-1 grid grid-cols-2">
-          <DotacionColumn num={3} label="TERCERA DOTACIÓN" />
-          <DotacionColumn num={4} label="CUARTA DOTACIÓN" />
-        </div>
-      </div>
-
-      <div className="mt-12 flex justify-end">
-        <span className="font-bold text-sm">Clave: 1A14-009-028</span>
+      <div className="mt-2 flex justify-between items-center text-[10px]">
+        <span className="font-bold">Clave: 1A14-009-028</span>
+        {emision === 'REIMPRESION' && <span className="font-black text-red-700">DOCUMENTO REIMPRESO</span>}
       </div>
     </div>
   );

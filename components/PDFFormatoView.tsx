@@ -1,193 +1,109 @@
-
 import React from 'react';
 import { Tramite, TipoBeneficiario } from '../types';
 
 interface PDFFormatoViewProps {
   tramite: Tramite;
+  metadata?: {
+    folio: string;
+    emision: 'ORIGINAL' | 'REIMPRESION';
+    autorizadoPor: string;
+    fechaAutorizacion: string;
+    motivoReimpresion?: string;
+  };
 }
 
-export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
+const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString('es-MX') : 'N/A');
+const formatDateTime = (value?: string) => (value ? new Date(value).toLocaleString('es-MX') : 'N/A');
+
+export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite, metadata }) => {
   const b = tramite.beneficiario;
 
   const checkbox = (checked: boolean) => (
-    <div className={`w-8 h-8 border-2 border-black flex items-center justify-center font-bold text-lg ${checked ? 'bg-white' : ''}`}>
+    <div className="w-6 h-6 border border-black flex items-center justify-center font-black text-xs leading-none">
       {checked ? 'X' : ''}
     </div>
   );
 
+  const emision = metadata?.emision || 'ORIGINAL';
+
   return (
-    <div className="bg-white p-10 w-[215.9mm] min-h-[279.4mm] mx-auto text-[11px] font-sans uppercase print-container text-black">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white flex items-center justify-center">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/7/74/IMSS_Logo.svg" alt="IMSS" className="w-full" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-[16px] font-bold leading-tight">INSTITUTO MEXICANO DEL SEGURO SOCIAL</h1>
-            <h2 className="text-[14px] font-bold leading-tight">FORMATO TRÁMITE DE ANTEOJOS</h2>
-          </div>
+    <div className="print-sheet-letter print-container p-[8mm] text-[10px] font-sans uppercase text-black leading-tight">
+      <div className="border border-black p-2 mb-3 text-[9px] bg-white">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <p><strong>Folio de control:</strong> {metadata?.folio || tramite.folio}</p>
+          <p><strong>Emisión:</strong> {emision}</p>
+          <p><strong>Autorizó impresión:</strong> {metadata?.autorizadoPor || tramite.nombreAutorizador || 'N/A'}</p>
+          <p><strong>Fecha/Hora:</strong> {formatDateTime(metadata?.fechaAutorizacion)}</p>
         </div>
-        <div className="text-right flex items-center gap-2">
-          <span className="font-bold">RECETA N°:</span>
-          <div className="border-b border-black min-w-[120px] text-center font-bold text-sm">
-            {tramite.folioRecetaImss}
-          </div>
-        </div>
+        {emision === 'REIMPRESION' && (
+          <p className="mt-1 font-bold text-red-700"><strong>Motivo reimpresión:</strong> {metadata?.motivoReimpresion || 'N/A'}</p>
+        )}
       </div>
 
-      {/* Row 1: Prescripción Para */}
-      <div className="flex items-center gap-10 mb-6 mt-8">
+      <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
         <div className="flex items-center gap-3">
-          <span className="font-bold">PRESCRIPCIÓN PARA:</span>
+          <div className="w-12 h-12">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/7/74/IMSS_Logo.svg" alt="IMSS" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <h1 className="text-[13px] font-black">Instituto Mexicano del Seguro Social</h1>
+            <h2 className="text-[12px] font-black">Formato Trámite de Anteojos</h2>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="font-bold">PERSONA TRABAJADORA</span>
-          {checkbox(b.tipo === TipoBeneficiario.TRABAJADOR)}
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="font-bold">HIJA/HIJO</span>
-          {checkbox(b.tipo === TipoBeneficiario.HIJO)}
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="font-bold text-right leading-tight">PERSONA JUBILADA /<br/>PENSIONADA</span>
-          {checkbox(b.tipo === TipoBeneficiario.JUBILADO_PENSIONADO)}
+        <div className="text-right">
+          <p className="font-bold">Receta No.</p>
+          <div className="border-b border-black min-w-[120px] font-black text-sm text-center">{tramite.folioRecetaImss}</div>
         </div>
       </div>
 
-      {/* Row 2: Lugar, Fecha, Clave */}
-      <div className="grid grid-cols-3 gap-8 mb-8">
-        <div>
-          <span className="font-bold block mb-4">LUGAR:</span>
-          <div className="border-b border-black h-8 flex items-end justify-center font-semibold">
-            {b.entidadLaboral}
-          </div>
-        </div>
-        <div>
-          <span className="font-bold block mb-4">FECHA DE ELABORACIÓN:</span>
-          <div className="border-b border-black h-8 flex items-end justify-center font-semibold">
-            {new Date(tramite.fechaCreacion).toLocaleDateString()}
-          </div>
-        </div>
-        <div>
-          <span className="font-bold block mb-2 leading-tight">CLAVE PRESUPUESTAL DE LA UNIDAD:</span>
-          <div className="border-b border-black h-8 flex items-end justify-center font-semibold">
-            {tramite.clavePresupuestal}
-          </div>
-        </div>
+      <div className="flex items-center gap-6 mb-4">
+        <span className="font-bold">Prescripción para:</span>
+        <div className="flex items-center gap-2"><span className="font-bold">Trabajador(a)</span>{checkbox(b.tipo === TipoBeneficiario.TRABAJADOR)}</div>
+        <div className="flex items-center gap-2"><span className="font-bold">Hija/Hijo</span>{checkbox(b.tipo === TipoBeneficiario.HIJO)}</div>
+        <div className="flex items-center gap-2"><span className="font-bold">Jubilada/Pensionada</span>{checkbox(b.tipo === TipoBeneficiario.JUBILADO_PENSIONADO)}</div>
       </div>
 
-      {/* Row 3: Nombres */}
-      <div className="space-y-6 mb-8">
-        <div>
-          <span className="font-bold block mb-1">NOMBRE DE LA PERSONA TRABAJADORA, JUBILADA O PENSIONADA:</span>
-          <div className="border-b border-black h-8 flex items-end font-semibold px-2">
-            {`${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`}
-          </div>
-        </div>
-        <div>
-          <span className="font-bold block mb-1">NOMBRE DE LA HIJA/HIJO DE LA PERSONA TRABAJADORA:</span>
-          <div className="border-b border-black h-8 flex items-end font-semibold px-2">
-            {b.tipo === TipoBeneficiario.HIJO ? b.nombre : 'N/A'}
-          </div>
-        </div>
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div><p className="font-bold mb-1">Lugar</p><div className="border-b border-black h-6 flex items-end justify-center font-semibold">{b.entidadLaboral}</div></div>
+        <div><p className="font-bold mb-1">Fecha elaboración</p><div className="border-b border-black h-6 flex items-end justify-center font-semibold">{formatDate(tramite.fechaCreacion)}</div></div>
+        <div><p className="font-bold mb-1">Clave presupuestal unidad</p><div className="border-b border-black h-6 flex items-end justify-center font-semibold">{tramite.clavePresupuestal}</div></div>
       </div>
 
-      {/* Row 4: NSS */}
-      <div className="space-y-6 mb-8">
-        <div>
-          <span className="font-bold block mb-1">No. DE SEGURIDAD SOCIAL DE LA PERSONA TRABAJADORA, JUBILADA O PENSIONADA:</span>
-          <div className="border-b border-black h-8 flex items-end font-semibold px-2 text-lg tracking-widest">
-            {b.nssTrabajador}
-          </div>
-        </div>
-        <div>
-          <span className="font-bold block mb-1">No. DE SEGURIDAD SOCIAL DE LA HIJA/HIJO:</span>
-          <div className="border-b border-black h-8 flex items-end font-semibold px-2 text-lg tracking-widest">
-            {b.nssHijo || 'N/A'}
-          </div>
-        </div>
+      <div className="space-y-3 mb-4">
+        <div><p className="font-bold">Nombre persona trabajadora/jubilada/pensionada</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold">{`${b.apellidoPaterno} ${b.apellidoMaterno} ${b.nombre}`}</div></div>
+        <div><p className="font-bold">Nombre hija/hijo</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold">{b.tipo === TipoBeneficiario.HIJO ? b.nombre : 'N/A'}</div></div>
       </div>
 
-      {/* Row 5: Descripción */}
-      <div className="mb-8">
-        <span className="font-bold block mb-1">DESCRIPCIÓN DEL LENTE:</span>
-        <div className="border-b border-black min-h-[60px] flex items-end font-semibold px-2 py-1 leading-relaxed">
-          {tramite.descripcionLente}
-        </div>
+      <div className="space-y-3 mb-4">
+        <div><p className="font-bold">NSS persona trabajadora/jubilada/pensionada</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold tracking-widest">{b.nssTrabajador}</div></div>
+        <div><p className="font-bold">NSS hija/hijo</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold tracking-widest">{b.nssHijo || 'N/A'}</div></div>
       </div>
 
-      <div className="mb-4">
-        <p className="font-bold text-[10px] italic">
-          SE AUTORIZA LA PRESCRIPCIÓN DESCRITA A LA PERSONA TRABAJADORA, HIJA O HIJO DE LA PERSONA TRABAJADORA, JUBILADA O PENSIONADA CON:
-        </p>
+      <div className="mb-3">
+        <p className="font-bold">Descripción del lente</p>
+        <div className="border border-black min-h-[40px] p-2 font-semibold">{tramite.descripcionLente}</div>
       </div>
 
-      {/* Row 6: Grid de Datos Finales */}
-      <div className="grid grid-cols-2 gap-x-20 gap-y-6 mb-12">
-        <div className="flex items-center">
-          <span className="font-bold w-40">MATRÍCULA:</span>
-          <div className="border-b border-black flex-1 text-center font-bold">{b.matricula || 'N/A'}</div>
-        </div>
-        <div className="flex items-center">
-          <span className="font-bold w-40">CLAVE DE ADSCRIPCIÓN:</span>
-          <div className="border-b border-black flex-1 text-center font-bold">{b.claveAdscripcion || 'N/A'}</div>
-        </div>
-        <div className="flex items-center">
-          <span className="font-bold w-40">FOLIO RECETA IMSS:</span>
-          <div className="border-b border-black flex-1 text-center font-bold">{tramite.folioRecetaImss}</div>
-        </div>
-        <div className="flex items-center">
-          <span className="font-bold w-40">FECHA DE EXPEDICIÓN:</span>
-          <div className="border-b border-black flex-1 text-center font-bold">
-            {new Date(tramite.fechaExpedicionReceta).toLocaleDateString()}
-          </div>
-        </div>
-        <div className="flex items-center">
-          <span className="font-bold w-40">FECHA RECEPCIÓN OPTICA:</span>
-          <div className="border-b border-black flex-1 text-center font-bold">
-            {tramite.fechaRecepcionOptica ? new Date(tramite.fechaRecepcionOptica).toLocaleDateString() : ''}
-          </div>
-        </div>
-        <div className="flex items-center">
-          <span className="font-bold w-40">FECHA ENTREGA OPTICA:</span>
-          <div className="border-b border-black flex-1 text-center font-bold">
-            {tramite.fechaEntregaOptica ? new Date(tramite.fechaEntregaOptica).toLocaleDateString() : ''}
-          </div>
-        </div>
+      <p className="font-bold text-[9px] mb-2">Se autoriza la prescripción descrita para la persona beneficiaria indicada.</p>
+
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4">
+        <div className="flex"><span className="font-bold w-36">Matrícula:</span><div className="border-b border-black flex-1 text-center font-bold">{b.matricula || 'N/A'}</div></div>
+        <div className="flex"><span className="font-bold w-36">Clave adscripción:</span><div className="border-b border-black flex-1 text-center font-bold">{b.claveAdscripcion || 'N/A'}</div></div>
+        <div className="flex"><span className="font-bold w-36">Folio receta IMSS:</span><div className="border-b border-black flex-1 text-center font-bold">{tramite.folioRecetaImss}</div></div>
+        <div className="flex"><span className="font-bold w-36">Fecha expedición:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(tramite.fechaExpedicionReceta)}</div></div>
+        <div className="flex"><span className="font-bold w-36">Fecha recepción óptica:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(tramite.fechaRecepcionOptica)}</div></div>
+        <div className="flex"><span className="font-bold w-36">Fecha entrega óptica:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(tramite.fechaEntregaOptica)}</div></div>
       </div>
 
-      {/* Firmas */}
-      <div className="grid grid-cols-3 border-2 border-black divide-x-2 divide-black h-48">
-        <div className="flex flex-col">
-          <div className="p-1 text-center font-bold border-b-2 border-black">AUTORIZACIÓN</div>
-          <div className="flex-1 flex flex-col items-center justify-end pb-2">
-            <span className="font-bold text-xs border-b border-black w-3/4 text-center mb-1 uppercase">
-              {tramite.nombreAutorizador || 'LIC. MOISES BELTRÁN CASTRO'}
-            </span>
-            <span className="font-bold text-[10px]">FIRMA</span>
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <div className="p-1 text-center font-bold border-b-2 border-black text-[9px] leading-tight">
-            PERSONA TRABAJADORA, JUBILADA O PENSIONADA
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-end pb-2">
-            <div className="border-b border-black w-3/4 h-1"></div>
-            <span className="font-bold text-[10px] mt-1">FIRMA</span>
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <div className="p-1 text-center font-bold border-b-2 border-black">RECIBÍ DE CONFORMIDAD</div>
-          <div className="flex-1 flex flex-col items-center justify-end pb-2">
-            <div className="border-b border-black w-3/4 h-1"></div>
-            <span className="font-bold text-[10px] mt-1">FIRMA</span>
-          </div>
-        </div>
+      <div className="grid grid-cols-3 border-2 border-black divide-x-2 divide-black h-32">
+        <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black">Autorización</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><span className="font-bold text-[10px] border-b border-black w-4/5 text-center mb-1">{tramite.nombreAutorizador || 'N/A'}</span><span className="font-bold text-[9px]">Firma</span></div></div>
+        <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black text-[9px]">Persona trabajadora/jubilada/pensionada</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><div className="border-b border-black w-4/5 h-1" /><span className="font-bold text-[9px] mt-1">Firma</span></div></div>
+        <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black">Recibí de conformidad</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><div className="border-b border-black w-4/5 h-1" /><span className="font-bold text-[9px] mt-1">Firma</span></div></div>
       </div>
 
-      <div className="mt-4 flex justify-end">
-        <span className="font-bold text-sm">Clave: 1A14-009-027</span>
+      <div className="mt-2 flex justify-between items-center text-[10px]">
+        <span className="font-bold">Clave: 1A14-009-027</span>
+        {emision === 'REIMPRESION' && <span className="font-black text-red-700">DOCUMENTO REIMPRESO</span>}
       </div>
     </div>
   );
