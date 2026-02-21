@@ -1790,6 +1790,24 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
     };
   }, [tramites]);
 
+  const SuggestionChips = ({ items, value, onPick }: { items: string[]; value?: string; onPick: (v: string) => void }) => {
+    const q = String(value || '').trim().toUpperCase();
+    const filtered = (items || []).filter((x) => {
+      const v = String(x || '').trim().toUpperCase();
+      return v && v !== q && (!q || v.includes(q));
+    }).slice(0, 5);
+    if (!filtered.length) return null;
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {filtered.map((opt) => (
+          <button key={opt} type="button" className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black" onClick={() => onPick(opt)}>
+            {opt}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   const validateStep1 = () => {
     const baseError = validateNuevoTramiteStep1({
       nombre: beneficiario.nombre,
@@ -2021,18 +2039,21 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                     <input list="sug-titularNombreCompleto" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                       value={beneficiario.titularNombreCompleto}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, titularNombreCompleto: e.target.value }); }} />
+                    <SuggestionChips items={suggestions.titularNombreCompleto} value={beneficiario.titularNombreCompleto} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, titularNombreCompleto: v }); }} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Matricula titular</label>
                     <input list="sug-matricula" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.matricula}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: e.target.value }); }} />
+                    <SuggestionChips items={suggestions.matricula} value={beneficiario.matricula} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: v }); }} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave adscripcion titular</label>
                     <input list="sug-claveAdscripcion" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
+                    <SuggestionChips items={suggestions.claveAdscripcion} value={beneficiario.claveAdscripcion} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: v }); }} />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Tipo de contratacion titular</label>
@@ -2051,18 +2072,21 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                 <input list="sug-nombre" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                   value={beneficiario.nombre}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, nombre: e.target.value }); }} />
+                <SuggestionChips items={suggestions.nombre} value={beneficiario.nombre} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, nombre: v }); }} />
               </div>
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Apellido paterno</label>
                 <input list="sug-apellidoPaterno" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                   value={beneficiario.apellidoPaterno}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, apellidoPaterno: e.target.value }); }} />
+                <SuggestionChips items={suggestions.apellidoPaterno} value={beneficiario.apellidoPaterno} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, apellidoPaterno: v }); }} />
               </div>
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Apellido materno</label>
                 <input list="sug-apellidoMaterno" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                   value={beneficiario.apellidoMaterno}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, apellidoMaterno: e.target.value }); }} />
+                <SuggestionChips items={suggestions.apellidoMaterno} value={beneficiario.apellidoMaterno} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, apellidoMaterno: v }); }} />
               </div>
 
               <div>
@@ -2070,6 +2094,7 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                 <input list="sug-nssTrabajador" inputMode="numeric" maxLength={11} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-imss text-xl tracking-[0.2em]"
                   value={beneficiario.nssTrabajador}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, nssTrabajador: e.target.value.replace(/\D/g, '') }); }} />
+                <SuggestionChips items={suggestions.nssTrabajador} value={beneficiario.nssTrabajador} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, nssTrabajador: String(v).replace(/\D/g, '') }); }} />
               </div>
 
               {beneficiario.tipo === TipoBeneficiario.HIJO && (
@@ -2079,6 +2104,7 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                     <input list="sug-nssHijo" inputMode="numeric" maxLength={11} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-imss text-xl tracking-[0.2em]"
                       value={beneficiario.nssHijo}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, nssHijo: e.target.value.replace(/\D/g, '') }); }} />
+                    <SuggestionChips items={suggestions.nssHijo} value={beneficiario.nssHijo} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, nssHijo: String(v).replace(/\D/g, '') }); }} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Fecha de nacimiento</label>
@@ -2096,12 +2122,14 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                     <input list="sug-matricula" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.matricula}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: e.target.value }); }} />
+                    <SuggestionChips items={suggestions.matricula} value={beneficiario.matricula} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: v }); }} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave adscripcion</label>
                     <input list="sug-claveAdscripcion" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
+                    <SuggestionChips items={suggestions.claveAdscripcion} value={beneficiario.claveAdscripcion} onPick={(v) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: v }); }} />
                     <p className="mt-2 text-[11px] font-bold text-amber-700">Aviso OOAD: se debera verificar que la adscripcion se encuentre dentro del OOAD, toda vez que el contrato de anteojos esta formalizado por estado y no aplica para usuarios de otros OOAD o estados.</p>
                   </div>
                   <div className="md:col-span-2">
