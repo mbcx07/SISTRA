@@ -333,6 +333,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handleImprocedenteIntent = async (draft: Tramite, reason: string) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      await dbService.addBitacora({
+        tramiteId: `INTENTO-IMPROCEDENTE-${Date.now()}`,
+        usuario: user.nombre,
+        accion: 'INTENTO_IMPROCEDENTE',
+        descripcion: `Solicitud no procedente para NSS ${draft.beneficiario?.nssTrabajador || 'N/D'} y contrato ${draft.contratoColectivoAplicable || 'N/D'}. ${reason}`,
+        categoria: 'SISTEMA',
+        datos: {
+          folioTemporal: draft.folio,
+          contratoColectivoAplicable: draft.contratoColectivoAplicable,
+          nssTrabajador: draft.beneficiario?.nssTrabajador,
+          tipoBeneficiario: draft.beneficiario?.tipo,
+          dotacionNumeroIntentada: draft.dotacionNumero
+        }
+      });
+      setUiMessage('Solicitud marcada como IMPROCEDENTE. No se guardo tramite y se registro bitacora de intento.');
+      setActiveTab('nuevo');
+    } catch (e: any) {
+      setUiMessage(e?.message || 'No fue posible registrar la bitacora de improcedente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUpdateEstatus = async (tramiteId: string, nuevoEstatus: EstatusWorkflow, nota?: string, importeAutorizado?: number) => {
     if (!user) return;
     setLoading(true);
@@ -364,6 +391,22 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePreviewPrint = (tramite: Tramite, type: PrintDocumentType) => {
+    if (!tramite) return;
+    setSelectedTramite(tramite);
+    setPrintConfig({
+      show: true,
+      type,
+      metadata: {
+        folio: tramite.folio,
+        documento: type,
+        emision: 'ORIGINAL',
+        autorizadoPor: user?.nombre || 'CAPTURISTA',
+        fechaAutorizacion: new Date().toISOString()
+      }
+    });
   };
 
   const handlePrintForTramite = async (tramite: Tramite, type: PrintDocumentType) => {
@@ -706,7 +749,7 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
-            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} onPrint={handlePrintForTramite} /> : <AccessDeniedView />)}
+            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} tramites={tramites} onSave={handleCreateTramite} onPrint={handlePrintForTramite} onPreviewPrint={handlePreviewPrint} onImprocedente={handleImprocedenteIntent} /> : <AccessDeniedView />)}
             {/* central view removida por operacion */}
             {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
           </div>
@@ -1573,10 +1616,10 @@ const TabButton = ({ label, active, onClick }: any) => (
   <button onClick={onClick} className={`whitespace-nowrap px-4 lg:px-10 py-4 lg:py-5 text-[10px] font-black uppercase tracking-widest transition-all border-b-4 ${active ? 'border-imss text-imss bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>{label}</button>
 );
 
-const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
+const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, onImprocedente }: any) => {
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string>('');
-  const [savedTramite, setSavedTramite] = useState<Tramite | null>(null);
+  const [draftTramite, setDraftTramite] = useState<Tramite | null>(null);
   const [viabilidadConfirmada, setViabilidadConfirmada] = useState(false);
   const [beneficiario, setBeneficiario] = useState<any>({
     tipo: TipoBeneficiario.TRABAJADOR,
@@ -1615,6 +1658,20 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
     setBeneficiario((prev: any) => ({ ...prev, requiereConstanciaEstudios }));
   }, [requiereConstanciaEstudios]);
 
+  const historialMismoContrato = useMemo(() => {
+    if (!draftTramite) return [];
+    const nssTitular = String(draftTramite.beneficiario?.nssTrabajador || '').trim();
+    const contrato = String(draftTramite.contratoColectivoAplicable || '').trim().toUpperCase();
+    if (!nssTitular || !contrato) return [];
+    return (tramites || []).filter((t: Tramite) =>
+      String(t.beneficiario?.nssTrabajador || '').trim() === nssTitular &&
+      String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato
+    );
+  }, [draftTramite, tramites]);
+
+  const totalMismoContrato = historialMismoContrato.length;
+  const bloqueadoPorContrato = totalMismoContrato >= 2;
+
   const validateStep1 = () => {
     const baseError = validateNuevoTramiteStep1({
       nombre: beneficiario.nombre,
@@ -1634,6 +1691,7 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
 
     if (beneficiario.tipo === TipoBeneficiario.HIJO) {
       if (!beneficiario.titularNombreCompleto?.trim()) return 'Captura nombre completo de la persona trabajadora titular.';
+      if (!beneficiario.matricula?.trim()) return 'Captura la matricula de la persona trabajadora titular.';
       if (!beneficiario.nssHijo?.trim() || !/^\d{10,11}$/.test(beneficiario.nssHijo.trim())) return 'El NSS de hija/hijo debe tener 10 u 11 digitos.';
       if (!beneficiario.fechaNacimiento) return 'Captura fecha de nacimiento de hija/hijo.';
       if (requiereConstanciaEstudios) {
@@ -1672,7 +1730,7 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
       return;
     }
 
-    if (step === 2 && targetStep === 3 && !savedTramite) {
+    if (step === 2 && targetStep === 3) {
       const titularNombre = beneficiario.tipo === TipoBeneficiario.HIJO
         ? beneficiario.titularNombreCompleto
         : `${beneficiario.nombre} ${beneficiario.apellidoPaterno} ${beneficiario.apellidoMaterno}`.trim();
@@ -1683,6 +1741,7 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
         beneficiario: {
           ...beneficiario,
           titularNombreCompleto: titularNombre,
+          matricula: String(beneficiario.matricula || '').trim(),
           constanciaEstudiosVigente: Boolean(beneficiario.constanciaEstudiosVigente),
           requiereConstanciaEstudios
         },
@@ -1705,11 +1764,8 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
         evidencias: [],
       };
 
-      const saved = await onSave(tramite, { redirectToTramites: false });
-      if (!saved) {
-        return;
-      }
-      setSavedTramite(saved);
+      setDraftTramite(tramite);
+      setViabilidadConfirmada(false);
     }
 
     setStepError('');
@@ -1717,13 +1773,55 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
   };
 
   const handlePrintHistorial = async () => {
-    if (!savedTramite) return;
-    await onPrint(savedTramite, 'tarjeta');
+    if (!draftTramite) return;
+    onPreviewPrint(draftTramite, 'tarjeta');
+  };
+
+  const resetWizard = () => {
+    setStep(1);
+    setStepError('');
+    setDraftTramite(null);
+    setViabilidadConfirmada(false);
+    setBeneficiario({
+      tipo: TipoBeneficiario.TRABAJADOR,
+      nombre: '',
+      apellidoPaterno: '',
+      apellidoMaterno: '',
+      nssTrabajador: '',
+      nssHijo: '',
+      titularNombreCompleto: '',
+      matricula: '',
+      claveAdscripcion: '',
+      tipoContratacion: '',
+      fechaNacimiento: '',
+      fechaConstanciaEstudios: '',
+      constanciaEstudiosVigente: false,
+      requiereConstanciaEstudios: false,
+      entidadLaboral: user.unidad,
+      ooad: user.ooad
+    });
+    setReceta({ folio: '', descripcion: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', clavePresupuestal: '', lugarSolicitud: '', dotacionNo: 1 });
+  };
+
+  const handleImprocedente = async () => {
+    if (!draftTramite) return;
+    await onImprocedente(draftTramite, bloqueadoPorContrato
+      ? `Bloqueado por limite de dotaciones para contrato (${totalMismoContrato} de 2).`
+      : 'Marcado manualmente por capturista en validacion de formato 28.');
+    resetWizard();
   };
 
   const handleConfirmarViabilidadEImprimirFormato = async () => {
-    if (!savedTramite || !viabilidadConfirmada) return;
-    await onPrint(savedTramite, 'formato');
+    if (!draftTramite || !viabilidadConfirmada) return;
+    if (bloqueadoPorContrato) {
+      setStepError(`IMPROCEDENTE: el titular ya cuenta con ${totalMismoContrato} dotaciones para el contrato colectivo ${draftTramite.contratoColectivoAplicable}. Limite maximo: 2.`);
+      return;
+    }
+
+    const saved = await onSave(draftTramite, { redirectToTramites: false });
+    if (!saved) return;
+    await onPrint(saved, 'formato');
+    resetWizard();
   };
 
   return (
@@ -1776,12 +1874,20 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
               </div>
 
               {beneficiario.tipo === TipoBeneficiario.HIJO && (
-                <div className="md:col-span-2">
-                  <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Nombre completo de la persona titular (trabajador/a)</label>
-                  <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
-                    value={beneficiario.titularNombreCompleto}
-                    onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, titularNombreCompleto: e.target.value }); }} />
-                </div>
+                <>
+                  <div className="md:col-span-2">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Nombre completo de la persona titular (trabajador/a)</label>
+                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
+                      value={beneficiario.titularNombreCompleto}
+                      onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, titularNombreCompleto: e.target.value }); }} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Matricula titular</label>
+                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                      value={beneficiario.matricula}
+                      onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: e.target.value }); }} />
+                  </div>
+                </>
               )}
 
               <div>
@@ -1918,7 +2024,9 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
               <ShieldCheck className="text-imss" size={44} />
             </div>
             <div className="text-center space-y-4">
-              <h3 className="text-2xl lg:text-4xl font-black text-slate-800 tracking-tight">Su solicitud ha sido registrada. Favor de validar dotaciones por contrato.</h3>
+              <h3 className="text-2xl lg:text-4xl font-black text-slate-800 tracking-tight">Validacion de Formato 28 (historial por contrato)</h3>
+              <p className="text-sm font-bold text-slate-600">Contrato actual: <span className="text-imss">{draftTramite?.contratoColectivoAplicable || 'SIN CAPTURA'}</span></p>
+              <p className={`text-sm font-black ${bloqueadoPorContrato ? 'text-red-700' : 'text-emerald-700'}`}>Contador para contrato: {totalMismoContrato} de 2</p>
             </div>
 
             <button
@@ -1928,8 +2036,27 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
               Imprimir historial de dotaciones
             </button>
 
-            <div className="p-5 lg:p-6 rounded-3xl bg-amber-50 border border-amber-200 text-amber-800 text-xs lg:text-sm font-bold leading-relaxed uppercase tracking-wide">
-              Revisar en historial y contrato colectivo si la solicitud aun es viable.
+            <div className={`p-5 lg:p-6 rounded-3xl border text-xs lg:text-sm font-bold leading-relaxed uppercase tracking-wide ${bloqueadoPorContrato ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+              {bloqueadoPorContrato
+                ? `IMPROCEDENTE: el titular ya cuenta con ${totalMismoContrato} dotaciones del mismo contrato colectivo. No se permite guardar tramite.`
+                : 'Revisar historial del titular y confirmar viabilidad del contrato colectivo antes de guardar.'}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:p-5">
+              <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Historial del titular para el contrato actual</p>
+              {historialMismoContrato.length === 0 ? (
+                <p className="text-sm font-bold text-slate-500">Sin dotaciones previas para este contrato.</p>
+              ) : (
+                <div className="space-y-2">
+                  {historialMismoContrato.map((h: Tramite) => (
+                    <div key={h.id} className="text-xs font-bold text-slate-700 border border-slate-100 rounded-xl px-3 py-2 flex flex-wrap gap-3 justify-between">
+                      <span>Folio: {h.folio}</span>
+                      <span>Dotacion: {h.dotacionNumero || '-'}</span>
+                      <span>Fecha: {new Date(h.fechaCreacion).toLocaleDateString('es-MX')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <label className="flex items-start gap-3 lg:gap-4 p-4 lg:p-5 rounded-2xl border-2 border-slate-200 bg-white">
@@ -1939,17 +2066,23 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
                 checked={viabilidadConfirmada}
                 onChange={(e) => setViabilidadConfirmada(e.target.checked)}
               />
-              <span className="text-sm lg:text-base font-black text-slate-700 uppercase tracking-wide">Confirmo que esta solicitud es viable para tramite siguiente</span>
+              <span className="text-sm lg:text-base font-black text-slate-700 uppercase tracking-wide">Confirmo que la solicitud es PROCEDENTE para continuar a formato 27</span>
             </label>
 
             <div className="flex flex-col sm:flex-row gap-4 lg:gap-6">
               <button onClick={() => goToStep(2)} className="px-6 lg:px-12 py-4 lg:py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
               <button
+                onClick={handleImprocedente}
+                className="flex-1 py-5 lg:py-7 bg-red-700 text-white rounded-[24px] lg:rounded-[32px] font-black uppercase tracking-[0.12em] lg:tracking-[0.22em] shadow-2xl hover:bg-red-800 transition-all"
+              >
+                Improcedente (cancelar alta)
+              </button>
+              <button
                 onClick={handleConfirmarViabilidadEImprimirFormato}
-                disabled={!viabilidadConfirmada}
+                disabled={!viabilidadConfirmada || bloqueadoPorContrato}
                 className="flex-1 py-5 lg:py-7 bg-imss-dark text-white rounded-[24px] lg:rounded-[32px] font-black uppercase tracking-[0.12em] lg:tracking-[0.22em] shadow-2xl hover:bg-black transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-imss-dark"
               >
-                Confirmo viabilidad e imprimir formato de tramite
+                Procedente: guardar e imprimir formato 27
               </button>
             </div>
           </div>

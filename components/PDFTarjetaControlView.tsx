@@ -19,6 +19,7 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
   const nombreHijo = b.tipo === TipoBeneficiario.HIJO
     ? `${valueOrEmpty(b.apellidoPaterno)} ${valueOrEmpty(b.apellidoMaterno)} ${valueOrEmpty(b.nombre)}`.trim()
     : '';
+  const matriculaTitular = valueOrEmpty(b.matricula) || valueOrEmpty(dotaciones.find(d => valueOrEmpty(d.beneficiario?.matricula))?.beneficiario?.matricula);
 
   const checkbox = (checked: boolean) => (
     <div className="w-6 h-6 border border-black flex items-center justify-center text-xs font-black">{checked ? 'X' : ''}</div>
@@ -31,18 +32,18 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
         <div className="p-1 text-center font-bold border-b border-black text-[9px]">{label}</div>
         <div className="flex-1 flex flex-col divide-y divide-black text-[9px]">
           <div className="h-8 flex items-center justify-center font-bold px-1 text-center">{valueOrEmpty(data?.folioRecetaImss)}</div>
-          <div className="h-12 flex items-center justify-center px-1 text-center font-bold leading-tight">{valueOrEmpty(data?.descripcionLente)}</div>
+          <div className="h-12 flex items-center justify-center px-1 text-center font-bold leading-tight break-words">{valueOrEmpty(data?.descripcionLente)}</div>
           <div className="h-8 flex items-center justify-center font-bold px-1 text-center">{valueOrEmpty(data?.folio)}</div>
           <div className="h-8 flex items-center justify-center font-bold">{formatDate(data?.fechaCreacion)}</div>
           <div className="h-8 flex items-center justify-center font-bold">{valueOrEmpty(data?.qnaInclusion)}</div>
-          <div className="h-14 flex items-end justify-center pb-1 px-1 text-center text-[8px] font-bold">{valueOrEmpty(data?.beneficiario?.nombre)} {valueOrEmpty(data?.beneficiario?.apellidoPaterno)}</div>
+          <div className="h-14 flex items-end justify-center pb-1 px-1 text-center text-[8px] font-bold">{valueOrEmpty(data?.beneficiario?.titularNombreCompleto) || `${valueOrEmpty(data?.beneficiario?.apellidoPaterno)} ${valueOrEmpty(data?.beneficiario?.apellidoMaterno)} ${valueOrEmpty(data?.beneficiario?.nombre)}`.trim()}</div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="print-sheet-letter print-container p-[8mm] text-[10px] font-sans uppercase text-black leading-tight">
+    <div className="print-sheet-letter print-container p-[6mm] sm:p-[8mm] text-[9px] sm:text-[10px] font-sans uppercase text-black leading-tight">
       <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-3">
         <div className="flex gap-3 items-center">
           <div className="w-12 h-12"><img src={logoSrc} onError={() => setLogoSrc(`${baseUrl}imss-logo.jpg`)} alt="IMSS" className="w-full h-full object-contain" /></div>
@@ -54,7 +55,7 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
         </div>
         <div className="text-right">
           <p className="font-bold">Matricula</p>
-          <div className="border-b border-black min-w-[140px] text-center font-black text-sm">{valueOrEmpty(b.matricula)}</div>
+          <div className="border-b border-black min-w-[140px] text-center font-black text-sm">{matriculaTitular}</div>
         </div>
       </div>
 
@@ -76,7 +77,7 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
         
       </div>
 
-      <div className="border-2 border-black flex mb-3">
+      <div className="border-2 border-black flex mb-3 overflow-hidden">
         <div className="w-[27%] flex flex-col border-r border-black divide-y divide-black font-bold text-[9px]">
           <div className="h-7" />
           <div className="h-8 flex items-center px-2">Receta No.</div>
@@ -92,7 +93,7 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
         </div>
       </div>
 
-      <div className="border-2 border-black flex">
+      <div className="border-2 border-black flex overflow-hidden">
         <div className="w-[27%] flex flex-col border-r border-black divide-y divide-black font-bold text-[9px]">
           <div className="h-7" />
           <div className="h-8 flex items-center px-2">Receta No.</div>
