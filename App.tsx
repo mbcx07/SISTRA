@@ -1748,25 +1748,42 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
     }
   }, []);
 
-  const getDotacionScopeKey = (tramiteLike: Partial<Tramite> | null | undefined) => {
-    const b: any = tramiteLike?.beneficiario || {};
-    const tipo = String(b.tipo || '').trim();
-    const nssTitular = String(b.nssTrabajador || '').trim();
-    const nssHijo = String(b.nssHijo || '').trim();
-    const nombreHijo = `${String(b.nombre || '').trim()}|${String(b.apellidoPaterno || '').trim()}|${String(b.apellidoMaterno || '').trim()}`;
-    return tipo === TipoBeneficiario.HIJO ? `HIJO:${nssTitular}:${nssHijo || nombreHijo}` : `TITULAR:${nssTitular}`;
+  const normalizePersonText = (v: any) => String(v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+
+  const isSameDotacionScope = (a: Partial<Tramite> | null | undefined, b: Partial<Tramite> | null | undefined) => {
+    const ba: any = a?.beneficiario || {};
+    const bb: any = b?.beneficiario || {};
+    const tipoA = String(ba.tipo || '').trim();
+    const tipoB = String(bb.tipo || '').trim();
+    const titularA = String(ba.nssTrabajador || '').replace(/\D/g, '').trim();
+    const titularB = String(bb.nssTrabajador || '').replace(/\D/g, '').trim();
+    if (!titularA || !titularB || titularA !== titularB) return false;
+
+    if (tipoA !== TipoBeneficiario.HIJO && tipoB !== TipoBeneficiario.HIJO) return true;
+
+    const nssHijoA = String(ba.nssHijo || '').replace(/\D/g, '').trim();
+    const nssHijoB = String(bb.nssHijo || '').replace(/\D/g, '').trim();
+    if (nssHijoA && nssHijoB) return nssHijoA === nssHijoB;
+
+    const nombreA = normalizePersonText(`${ba.nombre || ''} ${ba.apellidoPaterno || ''} ${ba.apellidoMaterno || ''}`);
+    const nombreB = normalizePersonText(`${bb.nombre || ''} ${bb.apellidoPaterno || ''} ${bb.apellidoMaterno || ''}`);
+    return Boolean(nombreA) && Boolean(nombreB) && nombreA === nombreB;
   };
 
   const historialMismoContrato = useMemo(() => {
     if (!draftTramite) return [];
-    const nssTitular = String(draftTramite.beneficiario?.nssTrabajador || '').trim();
+    const nssTitular = String(draftTramite.beneficiario?.nssTrabajador || '').replace(/\D/g, '').trim();
     const contrato = String(draftTramite.contratoColectivoAplicable || '').trim().toUpperCase();
-    const scopeKeyActual = getDotacionScopeKey(draftTramite);
     if (!nssTitular || !contrato) return [];
     return (tramites || []).filter((t: Tramite) =>
-      String(t.beneficiario?.nssTrabajador || '').trim() === nssTitular &&
+      String(t.beneficiario?.nssTrabajador || '').replace(/\D/g, '').trim() === nssTitular &&
       String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato &&
-      getDotacionScopeKey(t) === scopeKeyActual
+      isSameDotacionScope(t, draftTramite)
     );
   }, [draftTramite, tramites]);
 

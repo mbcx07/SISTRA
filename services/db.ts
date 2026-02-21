@@ -54,18 +54,31 @@ let currentUserProfile: User | null = null;
 let creatorAuthPromise: Promise<ReturnType<typeof getAuth>> | null = null;
 
 const normalizeMatricula = (matricula: string) => matricula.trim().toUpperCase();
-const getDotacionScopeKey = (tramiteLike: Partial<Tramite> | undefined): string => {
-  const b: any = tramiteLike?.beneficiario || {};
-  const tipo = String(b.tipo || '').trim();
-  const nssTitular = String(b.nssTrabajador || '').trim();
-  const nssHijo = String(b.nssHijo || '').trim();
-  const nombreHijo = `${String(b.nombre || '').trim()}|${String(b.apellidoPaterno || '').trim()}|${String(b.apellidoMaterno || '').trim()}`;
+const normalizePersonText = (v: any) => String(v || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toUpperCase();
 
-  if (tipo === TipoBeneficiario.HIJO) {
-    return `HIJO:${nssTitular}:${nssHijo || nombreHijo}`;
-  }
+const isSameDotacionScope = (a: Partial<Tramite> | undefined, b: Partial<Tramite> | undefined): boolean => {
+  const ba: any = a?.beneficiario || {};
+  const bb: any = b?.beneficiario || {};
+  const tipoA = String(ba.tipo || '').trim();
+  const tipoB = String(bb.tipo || '').trim();
+  const titularA = String(ba.nssTrabajador || '').replace(/\D/g, '').trim();
+  const titularB = String(bb.nssTrabajador || '').replace(/\D/g, '').trim();
+  if (!titularA || !titularB || titularA !== titularB) return false;
 
-  return `TITULAR:${nssTitular}`;
+  if (tipoA !== TipoBeneficiario.HIJO && tipoB !== TipoBeneficiario.HIJO) return true;
+
+  const nssHijoA = String(ba.nssHijo || '').replace(/\D/g, '').trim();
+  const nssHijoB = String(bb.nssHijo || '').replace(/\D/g, '').trim();
+  if (nssHijoA && nssHijoB) return nssHijoA === nssHijoB;
+
+  const nombreA = normalizePersonText(`${ba.nombre || ''} ${ba.apellidoPaterno || ''} ${ba.apellidoMaterno || ''}`);
+  const nombreB = normalizePersonText(`${bb.nombre || ''} ${bb.apellidoPaterno || ''} ${bb.apellidoMaterno || ''}`);
+  return Boolean(nombreA) && Boolean(nombreB) && nombreA === nombreB;
 };
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
@@ -599,12 +612,11 @@ export const dbService = {
             limit(200)
           );
           const historialSnap = await getDocs(historialQ);
-          const scopeKeyActual = getDotacionScopeKey(tramite);
           const historialMismoContrato = historialSnap.docs
             .map((d) => ({ id: d.id, ...(d.data() as Tramite) }))
             .filter((t) => t.id !== tramite.id)
             .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
-            .filter((t) => getDotacionScopeKey(t) === scopeKeyActual);
+            .filter((t) => isSameDotacionScope(t, tramite));
           if (historialMismoContrato.length >= 2) {
             throw new Error(`No se puede guardar. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
           }
@@ -656,11 +668,10 @@ export const dbService = {
           limit(200)
         );
         const historialSnap = await getDocs(historialQ);
-        const scopeKeyActual = getDotacionScopeKey(tramite);
         const historialMismoContrato = historialSnap.docs
           .map((d) => d.data() as Tramite)
           .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
-          .filter((t) => getDotacionScopeKey(t) === scopeKeyActual);
+          .filter((t) => isSameDotacionScope(t, tramite));
 
         if (historialMismoContrato.length >= 2) {
           throw new Error(`No se puede registrar una nueva solicitud. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
