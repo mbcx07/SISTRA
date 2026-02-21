@@ -864,6 +864,7 @@ const AdminUsersView = ({ currentUser, onChangePassword, onLogout }: { currentUs
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          <p className="text-[11px] text-slate-500 font-semibold">La contraseña debe tener al menos 10 caracteres, una mayúscula, una minúscula, un número y un carácter especial.</p>
           <button className="w-full py-3 bg-imss text-white rounded-xl font-black uppercase" onClick={async ()=>{
             const issues = validatePasswordStrength(password);
             if (issues.length > 0) {
@@ -1798,7 +1799,7 @@ const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
             </div>
             <div>
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Contrato colectivo aplicable (obligatorio)</label>
-              <input placeholder="Ej. CCT-IMSS/2026-P1" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.contratoColectivoAplicable} onChange={(e) => { setStepError(''); setReceta({ ...receta, contratoColectivoAplicable: e.target.value }); }} />
+              <input placeholder="CCT 2025-2027" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.contratoColectivoAplicable} onChange={(e) => { setStepError(''); setReceta({ ...receta, contratoColectivoAplicable: e.target.value }); }} />
             </div>
             <div>
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Qna/Mes inclusion</label>
