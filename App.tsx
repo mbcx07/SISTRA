@@ -1773,6 +1773,23 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
   const totalMismoContrato = historialMismoContrato.length;
   const bloqueadoPorContrato = totalMismoContrato >= 2;
 
+  const suggestions = useMemo(() => {
+    const uniq = (arr: string[]) => Array.from(new Set(arr.map((x) => String(x || '').trim()).filter(Boolean)));
+    const b = (tramites || []).map((t: Tramite) => t.beneficiario || {} as any);
+    return {
+      titularNombreCompleto: uniq(b.map((x: any) => x.titularNombreCompleto)),
+      nombre: uniq(b.map((x: any) => x.nombre)),
+      apellidoPaterno: uniq(b.map((x: any) => x.apellidoPaterno)),
+      apellidoMaterno: uniq(b.map((x: any) => x.apellidoMaterno)),
+      entidadLaboral: uniq(b.map((x: any) => x.entidadLaboral)),
+      ooad: uniq(b.map((x: any) => x.ooad)),
+      matricula: uniq(b.map((x: any) => x.matricula)),
+      claveAdscripcion: uniq(b.map((x: any) => x.claveAdscripcion)),
+      nssTrabajador: uniq(b.map((x: any) => x.nssTrabajador)),
+      nssHijo: uniq(b.map((x: any) => x.nssHijo)),
+    };
+  }, [tramites]);
+
   const validateStep1 = () => {
     const baseError = validateNuevoTramiteStep1({
       nombre: beneficiario.nombre,
@@ -1986,13 +2003,13 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
               </div>
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Unidad / adscripcion</label>
-                <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                <input list="sug-entidadLaboral" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                   value={beneficiario.entidadLaboral}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, entidadLaboral: e.target.value }); }} />
               </div>
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">OOAD</label>
-                <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                <input list="sug-ooad" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                   value={beneficiario.ooad}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, ooad: e.target.value }); }} />
               </div>
@@ -2001,19 +2018,19 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                 <>
                   <div className="md:col-span-2">
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Nombre completo de la persona titular (trabajador/a)</label>
-                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
+                    <input list="sug-titularNombreCompleto" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                       value={beneficiario.titularNombreCompleto}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, titularNombreCompleto: e.target.value }); }} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Matricula titular</label>
-                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                    <input list="sug-matricula" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.matricula}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: e.target.value }); }} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave adscripcion titular</label>
-                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                    <input list="sug-claveAdscripcion" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
                   </div>
@@ -2031,26 +2048,26 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
 
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">{beneficiario.tipo === TipoBeneficiario.HIJO ? 'Nombre(s) de hija/hijo beneficiario' : 'Nombre(s) del beneficiario'}</label>
-                <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
+                <input list="sug-nombre" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                   value={beneficiario.nombre}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, nombre: e.target.value }); }} />
               </div>
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Apellido paterno</label>
-                <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
+                <input list="sug-apellidoPaterno" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                   value={beneficiario.apellidoPaterno}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, apellidoPaterno: e.target.value }); }} />
               </div>
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Apellido materno</label>
-                <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
+                <input list="sug-apellidoMaterno" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black uppercase text-slate-800"
                   value={beneficiario.apellidoMaterno}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, apellidoMaterno: e.target.value }); }} />
               </div>
 
               <div>
                 <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">NSS titular</label>
-                <input inputMode="numeric" maxLength={11} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-imss text-xl tracking-[0.2em]"
+                <input list="sug-nssTrabajador" inputMode="numeric" maxLength={11} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-imss text-xl tracking-[0.2em]"
                   value={beneficiario.nssTrabajador}
                   onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, nssTrabajador: e.target.value.replace(/\D/g, '') }); }} />
               </div>
@@ -2059,7 +2076,7 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                 <>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">NSS hija/hijo</label>
-                    <input inputMode="numeric" maxLength={11} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-imss text-xl tracking-[0.2em]"
+                    <input list="sug-nssHijo" inputMode="numeric" maxLength={11} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-imss text-xl tracking-[0.2em]"
                       value={beneficiario.nssHijo}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, nssHijo: e.target.value.replace(/\D/g, '') }); }} />
                   </div>
@@ -2076,13 +2093,13 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
                 <>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Matricula</label>
-                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                    <input list="sug-matricula" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.matricula}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: e.target.value }); }} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave adscripcion</label>
-                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                    <input list="sug-claveAdscripcion" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
                     <p className="mt-2 text-[11px] font-bold text-amber-700">Aviso OOAD: se debera verificar que la adscripcion se encuentre dentro del OOAD, toda vez que el contrato de anteojos esta formalizado por estado y no aplica para usuarios de otros OOAD o estados.</p>
@@ -2229,6 +2246,17 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
             </div>
           </div>
         )}
+
+        <datalist id="sug-titularNombreCompleto">{suggestions.titularNombreCompleto.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-nombre">{suggestions.nombre.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-apellidoPaterno">{suggestions.apellidoPaterno.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-apellidoMaterno">{suggestions.apellidoMaterno.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-entidadLaboral">{suggestions.entidadLaboral.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-ooad">{suggestions.ooad.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-matricula">{suggestions.matricula.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-claveAdscripcion">{suggestions.claveAdscripcion.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-nssTrabajador">{suggestions.nssTrabajador.map((x: string) => <option key={x} value={x} />)}</datalist>
+        <datalist id="sug-nssHijo">{suggestions.nssHijo.map((x: string) => <option key={x} value={x} />)}</datalist>
       </div>
     </div>
   );
