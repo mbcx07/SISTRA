@@ -598,7 +598,7 @@ const App: React.FC = () => {
     return (
       <div className="bg-white p-0">
         <div className="no-print p-4 bg-imss-dark text-white flex justify-between items-center sticky top-0 z-50">
-          <button onClick={() => setPrintConfig({show: false, type: 'formato'})} className="flex items-center gap-2 font-bold uppercase text-xs">
+          <button onClick={() => { setPrintConfig({show: false, type: 'formato'}); if (!selectedTramite?.id) setSelectedTramite(null); }} className="flex items-center gap-2 font-bold uppercase text-xs">
             <ArrowLeft size={16} /> Volver al Sistema
           </button>
           <div className="flex items-center gap-2">

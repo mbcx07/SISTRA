@@ -27,17 +27,19 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
 
   const DotacionColumn = ({ num, label }: { num: number; label: string }) => {
     const data = getDotacionData(num);
-    const firmaTitular = valueOrEmpty(data?.beneficiario?.titularNombreCompleto)
-      || valueOrEmpty(b.titularNombreCompleto)
-      || `${valueOrEmpty(data?.beneficiario?.apellidoPaterno)} ${valueOrEmpty(data?.beneficiario?.apellidoMaterno)} ${valueOrEmpty(data?.beneficiario?.nombre)}`.trim();
+    const firmaTitular = data
+      ? (valueOrEmpty(data?.beneficiario?.titularNombreCompleto)
+        || valueOrEmpty(b.titularNombreCompleto)
+        || `${valueOrEmpty(data?.beneficiario?.apellidoPaterno)} ${valueOrEmpty(data?.beneficiario?.apellidoMaterno)} ${valueOrEmpty(data?.beneficiario?.nombre)}`.trim())
+      : '';
     return (
       <div className="flex flex-col border-r border-black last:border-r-0 min-w-0">
         <div className="h-7 px-1 flex items-center justify-center text-center font-bold border-b border-black text-[9px] overflow-hidden">{label}</div>
-        <div className="h-8 flex items-center justify-center font-bold px-1 text-center border-b border-black overflow-hidden">{valueOrEmpty(data?.folioRecetaImss)}</div>
+        <div className="h-8 flex items-center justify-center font-bold px-1 text-center border-b border-black overflow-hidden whitespace-nowrap text-ellipsis">{valueOrEmpty(data?.folioRecetaImss)}</div>
         <div className="h-12 flex items-center justify-center px-1 text-center font-bold leading-tight break-words border-b border-black overflow-hidden">{valueOrEmpty(data?.descripcionLente)}</div>
-        <div className="h-8 flex items-center justify-center font-bold px-1 text-center border-b border-black overflow-hidden">{valueOrEmpty(data?.folio)}</div>
-        <div className="h-8 flex items-center justify-center font-bold border-b border-black overflow-hidden">{formatDate(data?.fechaCreacion)}</div>
-        <div className="h-8 flex items-center justify-center font-bold border-b border-black overflow-hidden">{valueOrEmpty(data?.qnaInclusion)}</div>
+        <div className="h-8 flex items-center justify-center font-bold px-1 text-center border-b border-black overflow-hidden whitespace-nowrap text-ellipsis">{valueOrEmpty(data?.folio)}</div>
+        <div className="h-8 flex items-center justify-center font-bold border-b border-black overflow-hidden whitespace-nowrap">{formatDate(data?.fechaCreacion)}</div>
+        <div className="h-8 flex items-center justify-center font-bold border-b border-black overflow-hidden whitespace-nowrap">{valueOrEmpty(data?.qnaInclusion)}</div>
         <div className="h-14 flex items-end justify-center pb-1 px-1 text-center text-[8px] font-bold overflow-hidden break-words">{firmaTitular}</div>
       </div>
     );
