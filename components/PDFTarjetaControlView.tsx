@@ -134,14 +134,12 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
         <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Nombre(s):</span><span className="border-b border-black flex-1 font-black">{titularNombre}</span></div>
         <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[250px]">Nombre(s) de la hija o hijo de la persona trabajadora:</span><span className="border-b border-black flex-1 font-bold">{nombreHijo}</span></div>
         <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[90px]">Adscripcion:</span><span className="border-b border-black flex-1 font-bold">{valueOrEmpty(b.entidadLaboral)}</span></div>
-        <div className="flex gap-2 items-baseline"><span className="font-bold min-w-[160px]">Constancia de estudios:</span><span className="border-b border-black flex-1 font-bold">{b.requiereConstanciaEstudios ? (b.constanciaEstudiosVigente ? 'VIGENTE' : 'NO VIGENTE') : 'NO APLICA'}</span></div>
-        
       </div>
 
       <DotacionPairTable a={1} b={2} labelA="Primera dotacion" labelB="Segunda dotacion" />
       <DotacionPairTable a={3} b={4} labelA="Tercera dotacion" labelB="Cuarta dotacion" />
 
-      <div className="mt-2 flex justify-between items-center text-[10px]">
+      <div className="mt-2 flex justify-end items-center text-[10px]">
         <span className="font-bold">Clave: 1A14-009-028</span>
       </div>
     </div>
