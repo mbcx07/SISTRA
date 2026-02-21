@@ -808,7 +808,7 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         <button disabled={loading} className="w-full py-4 rounded-xl btn-institutional disabled:opacity-50">
           {loading ? 'Ingresando...' : 'Iniciar sesión'}
         </button>
-        <p className="text-[11px] text-slate-500 mt-4">Acceso con Firebase Auth (matricula + contraseña).</p>
+        {/* mensaje de acceso oculto por requerimiento */}
       </form>
     </div>
   );
