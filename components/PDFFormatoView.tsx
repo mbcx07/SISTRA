@@ -66,13 +66,6 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
         <div><p className="font-bold">NSS hija/hijo</p><div className="border-b border-black h-6 flex items-end px-2 font-semibold tracking-widest">{valueOrEmpty(b.nssHijo)}</div></div>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4">
-        <div className="flex"><span className="font-bold w-44">Tipo de contratacion:</span><div className="border-b border-black flex-1 text-center font-bold">{valueOrEmpty(b.tipoContratacion)}</div></div>
-        <div className="flex"><span className="font-bold w-44">Fecha nacimiento:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(b.fechaNacimiento)}</div></div>
-        <div className="flex"><span className="font-bold w-44">Constancia de estudios:</span><div className="border-b border-black flex-1 text-center font-bold">{b.requiereConstanciaEstudios ? (b.constanciaEstudiosVigente ? 'VIGENTE' : '') : ''}</div></div>
-        <div className="flex"><span className="font-bold w-44">Fecha constancia:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(b.fechaConstanciaEstudios)}</div></div>
-      </div>
-
       <div className="mb-3 space-y-2">
         <div>
           <p className="font-bold">Descripcion del lente</p>
@@ -97,7 +90,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
         <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black">Recibi de conformidad</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><div className="border-b border-black w-4/5 h-1" /><span className="font-bold text-[9px] mt-1">Firma</span></div></div>
       </div>
 
-      <div className="mt-2 flex justify-between items-center text-[10px]">
+      <div className="mt-2 flex justify-end items-center text-[10px]">
         <span className="font-bold">Clave: 1A14-009-027</span>
       </div>
     </div>
