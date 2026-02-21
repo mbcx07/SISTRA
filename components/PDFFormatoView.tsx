@@ -34,7 +34,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
           </div>
           <div>
             <h1 className="text-[13px] font-black">Instituto Mexicano del Seguro Social</h1>
-            <p className="text-[10px] font-black mt-1">Solicitud de dotacion de anteojos</p>
+            <p className="text-[10px] font-black mt-1">FORMATO TRAMITE DE ANTEOJOS</p>
           </div>
         </div>
         <div className="text-right">
@@ -45,9 +45,9 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
 
       <div className="flex items-center gap-6 mb-4">
         <span className="font-bold">Prescripcion para:</span>
-        <div className="flex items-center gap-2"><span className="font-bold">Trabajador(a)</span>{checkbox(b.tipo === TipoBeneficiario.TRABAJADOR)}</div>
+        <div className="flex items-center gap-2"><span className="font-bold">Persona trabajadora</span>{checkbox(b.tipo === TipoBeneficiario.TRABAJADOR)}</div>
         <div className="flex items-center gap-2"><span className="font-bold">Hija/Hijo</span>{checkbox(b.tipo === TipoBeneficiario.HIJO)}</div>
-        <div className="flex items-center gap-2"><span className="font-bold">Jubilada/Pensionada</span>{checkbox(b.tipo === TipoBeneficiario.JUBILADO_PENSIONADO)}</div>
+        <div className="flex items-center gap-2"><span className="font-bold">Persona jubilada/pensionada</span>{checkbox(b.tipo === TipoBeneficiario.JUBILADO_PENSIONADO)}</div>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-4">
@@ -80,6 +80,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
         </div>
       </div>
 
+      <p className="font-bold mb-2">Se autoriza la prescripcion descrita a la persona trabajadora, hija o hijo de la persona trabajadora, jubilada o pensionada con:</p>
       <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4">
         <div className="flex"><span className="font-bold w-36">Matricula:</span><div className="border-b border-black flex-1 text-center font-bold">{matriculaTitular}</div></div>
         <div className="flex"><span className="font-bold w-36">Clave adscripcion:</span><div className="border-b border-black flex-1 text-center font-bold">{claveAdscripcionTitular}</div></div>
@@ -91,7 +92,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
       </div>
 
       <div className="grid grid-cols-3 border-2 border-black divide-x-2 divide-black h-32">
-        <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black">Autorizacion</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><span className="font-bold text-[10px] border-b border-black w-4/5 text-center mb-1">{valueOrEmpty(tramite.nombreAutorizador)}</span><span className="font-bold text-[9px]">Firma</span></div></div>
+        <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black">Autorizacion</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><span className="font-bold text-[10px] border-b border-black w-4/5 text-center mb-1">{valueOrEmpty(tramite.nombreAutorizador)}</span><span className="font-bold text-[9px]">Nombre y firma</span></div></div>
         <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black text-[9px]">Persona trabajadora/jubilada/pensionada</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><div className="border-b border-black w-4/5 h-1" /><span className="font-bold text-[9px] mt-1">Firma</span></div></div>
         <div className="flex flex-col"><div className="p-1 text-center font-bold border-b-2 border-black">Recibi de conformidad</div><div className="flex-1 flex flex-col items-center justify-end pb-2"><div className="border-b border-black w-4/5 h-1" /><span className="font-bold text-[9px] mt-1">Firma</span></div></div>
       </div>
