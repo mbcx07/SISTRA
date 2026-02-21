@@ -974,11 +974,13 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
 const DashboardView = ({ presupuestoGlobal, onUpdatePresupuesto, resumenSolicitudesPorUnidad }: any) => {
   const totalSolicitudes = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalSolicitudes || 0), 0);
   const totalImporte = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalCosto || 0), 0);
+  const porcentajeUso = presupuestoGlobal > 0 ? (totalImporte / presupuestoGlobal) * 100 : 0;
+  const presupuestoRestante = Math.max(0, Number(presupuestoGlobal || 0) - Number(totalImporte || 0));
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="bg-white rounded-[32px] border border-slate-100 p-6 lg:p-8 shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-end">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6 items-end">
           <div>
             <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto</label>
             <input
@@ -997,6 +999,14 @@ const DashboardView = ({ presupuestoGlobal, onUpdatePresupuesto, resumenSolicitu
           <div>
             <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Importe total solicitudes</p>
             <p className="text-2xl font-black text-imss">{formatCurrency(totalImporte)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto restante</p>
+            <p className="text-2xl font-black text-emerald-700">{formatCurrency(presupuestoRestante)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Porcentaje de uso</p>
+            <p className="text-2xl font-black text-slate-800">{porcentajeUso.toFixed(2)}%</p>
           </div>
         </div>
       </div>
