@@ -808,7 +808,7 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         <button disabled={loading} className="w-full py-4 rounded-xl btn-institutional disabled:opacity-50">
           {loading ? 'Ingresando...' : 'Iniciar sesión'}
         </button>
-        {/* mensaje de acceso oculto por requerimiento */}
+        {/* nota de acceso removida por requerimiento */}
       </form>
     </div>
   );
