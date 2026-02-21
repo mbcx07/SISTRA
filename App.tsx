@@ -1683,6 +1683,7 @@ const TabButton = ({ label, active, onClick }: any) => (
 );
 
 const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPreviewPrint, onImprocedente }: any) => {
+  const WIZARD_SNAPSHOT_KEY = 'sistra.nuevoWizardSnapshot';
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string>('');
   const [draftTramite, setDraftTramite] = useState<Tramite | null>(null);
@@ -1730,6 +1731,22 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
       setReceta((prev) => ({ ...prev, contratoColectivoAplicable: cctCatalog[0] }));
     }
   }, [cctCatalog]);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(WIZARD_SNAPSHOT_KEY);
+      if (!raw) return;
+      const snap = JSON.parse(raw);
+      if (snap?.beneficiario) setBeneficiario(snap.beneficiario);
+      if (snap?.receta) setReceta(snap.receta);
+      if (typeof snap?.step === 'number') setStep(snap.step);
+      if (typeof snap?.stepError === 'string') setStepError(snap.stepError);
+      if (snap?.draftTramite) setDraftTramite(snap.draftTramite);
+      if (typeof snap?.viabilidadConfirmada === 'boolean') setViabilidadConfirmada(snap.viabilidadConfirmada);
+    } catch {
+      // ignore snapshot parse errors
+    }
+  }, []);
 
   const getDotacionScopeKey = (tramiteLike: Partial<Tramite> | null | undefined) => {
     const b: any = tramiteLike?.beneficiario || {};
@@ -1858,12 +1875,33 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
     setStep(targetStep);
   };
 
+  const saveWizardSnapshot = () => {
+    try {
+      sessionStorage.setItem(WIZARD_SNAPSHOT_KEY, JSON.stringify({
+        step,
+        stepError,
+        beneficiario,
+        receta,
+        draftTramite,
+        viabilidadConfirmada
+      }));
+    } catch {
+      // ignore storage issues
+    }
+  };
+
+  const clearWizardSnapshot = () => {
+    try { sessionStorage.removeItem(WIZARD_SNAPSHOT_KEY); } catch {}
+  };
+
   const handlePrintHistorial = async () => {
     if (!draftTramite) return;
+    saveWizardSnapshot();
     onPreviewPrint(draftTramite, 'tarjeta');
   };
 
   const resetWizard = () => {
+    clearWizardSnapshot();
     setStep(1);
     setStepError('');
     setDraftTramite(null);
