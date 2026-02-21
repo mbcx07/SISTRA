@@ -628,17 +628,19 @@ const App: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3 lg:gap-6 w-full lg:w-auto">
-               <div className="relative group flex-1 lg:flex-none">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-imss transition-colors" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Buscar NSS o Folio..." 
-                  aria-label="Buscar por NSS, folio o nombre"
-                  className="pl-12 pr-6 py-3 bg-slate-50 border-2 border-transparent rounded-[20px] text-sm font-bold focus:bg-white focus:border-imss outline-none w-full lg:w-80 transition-all shadow-inner"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+               {activeTab === 'tramites' && (
+                <div className="relative group flex-1 lg:flex-none">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-imss transition-colors" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar NSS o Folio..." 
+                    aria-label="Buscar por NSS, folio o nombre"
+                    className="pl-12 pr-6 py-3 bg-slate-50 border-2 border-transparent rounded-[20px] text-sm font-bold focus:bg-white focus:border-imss outline-none w-full lg:w-80 transition-all shadow-inner"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              )}
               {loading && <Loader2 className="animate-spin text-imss" size={24} />}
 
               <div className="relative" ref={userMenuRef}>
