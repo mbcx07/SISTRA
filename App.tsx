@@ -1703,6 +1703,7 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
     if (beneficiario.tipo === TipoBeneficiario.HIJO) {
       if (!beneficiario.titularNombreCompleto?.trim()) return 'Captura nombre completo de la persona trabajadora titular.';
       if (!beneficiario.matricula?.trim()) return 'Captura la matricula de la persona trabajadora titular.';
+      if (!beneficiario.claveAdscripcion?.trim()) return 'Captura la clave de adscripcion de la persona trabajadora titular.';
       if (!beneficiario.nssHijo?.trim() || !/^\d{10,11}$/.test(beneficiario.nssHijo.trim())) return 'El NSS de hija/hijo debe tener 10 u 11 digitos.';
       if (!beneficiario.fechaNacimiento) return 'Captura fecha de nacimiento de hija/hijo.';
       if (requiereConstanciaEstudios) {
@@ -1897,6 +1898,12 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
                     <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.matricula}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, matricula: e.target.value }); }} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave adscripcion titular</label>
+                    <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                      value={beneficiario.claveAdscripcion}
+                      onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
                   </div>
                 </>
               )}
