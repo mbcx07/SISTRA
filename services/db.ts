@@ -583,7 +583,6 @@ export const dbService = {
           const historialQ = query(
             collection(db, "tramites"),
             where("beneficiario.nssTrabajador", "==", nssTitular),
-            orderBy("fechaCreacion", "desc"),
             limit(200)
           );
           const historialSnap = await getDocs(historialQ);
@@ -639,7 +638,6 @@ export const dbService = {
         const historialQ = query(
           collection(db, "tramites"),
           where("beneficiario.nssTrabajador", "==", nssTitular),
-          orderBy("fechaCreacion", "desc"),
           limit(200)
         );
         const historialSnap = await getDocs(historialQ);
