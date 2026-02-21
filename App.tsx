@@ -1792,9 +1792,10 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
 
   const SuggestionChips = ({ items, value, onPick }: { items: string[]; value?: string; onPick: (v: string) => void }) => {
     const q = String(value || '').trim().toUpperCase();
+    if (q.length < 2) return null;
     const filtered = (items || []).filter((x) => {
       const v = String(x || '').trim().toUpperCase();
-      return v && v !== q && (!q || v.includes(q));
+      return v && v !== q && v.includes(q);
     }).slice(0, 5);
     if (!filtered.length) return null;
     return (
