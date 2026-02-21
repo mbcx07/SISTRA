@@ -33,5 +33,8 @@ export const calcularEdad = (fechaNacimiento: string): number => {
 
 export const generateFolio = (unidad: string, consecutivo: number): string => {
   const anio = new Date().getFullYear();
-  return `OOAD-${unidad}-${anio}-${consecutivo.toString().padStart(5, '0')}`;
+  const unidadRaw = String(unidad || '').toUpperCase().trim();
+  const unidadSinPrefijo = unidadRaw.replace(/^OOAD\s*-?\s*/i, '').trim();
+  const unidadToken = unidadSinPrefijo || unidadRaw || '00';
+  return `${unidadToken}-${anio}-${consecutivo.toString().padStart(5, '0')}`;
 };

@@ -1065,7 +1065,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
               <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase">Fecha: {new Date(t.fechaCreacion).toLocaleDateString()}</p>
             </td>
             <td className="px-10 py-8">
-              <p className="font-black text-slate-800 text-sm uppercase">{t.beneficiario?.nombre || 'N/A'} {t.beneficiario?.apellidoPaterno || ''}</p>
+              <p className="font-black text-slate-800 text-sm uppercase">{[t.beneficiario?.nombre, t.beneficiario?.apellidoPaterno, t.beneficiario?.apellidoMaterno].filter(Boolean).join(' ') || 'N/A'}</p>
               <p className="text-[10px] text-imss font-black mt-1">NSS: {t.beneficiario?.nssTrabajador || 'SIN NSS'}</p>
             </td>
             <td className="px-10 py-8 text-center">
@@ -1171,7 +1171,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                   <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 shadow-inner">
                     <h4 className="text-[11px] font-black text-slate-400 uppercase mb-8 tracking-[0.2em]">Cedula del Beneficiario</h4>
                     <div className="grid grid-cols-1 gap-8">
-                      <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Nombre del Solicitante</p><p className="font-black text-slate-800 text-xl uppercase leading-tight">{tramite.beneficiario?.nombre} {tramite.beneficiario?.apellidoPaterno}</p></div>
+                      <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Nombre del Solicitante</p><p className="font-black text-slate-800 text-xl uppercase leading-tight">{[tramite.beneficiario?.nombre, tramite.beneficiario?.apellidoPaterno, tramite.beneficiario?.apellidoMaterno].filter(Boolean).join(' ')}</p></div>
                       <div className="grid grid-cols-2 gap-6">
                         <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">NSS</p><p className="font-black text-imss text-lg tracking-widest">{tramite.beneficiario?.nssTrabajador}</p></div>
                         <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Unidad</p><p className="font-black text-slate-800 uppercase text-lg">{tramite.beneficiario?.entidadLaboral}</p></div>
@@ -1323,34 +1323,97 @@ const EditCaptureModal = ({ tramite, onClose, onSave, loading }: {
           <button type="button" onClick={onClose} className="text-xs font-bold uppercase">Cerrar</button>
         </div>
         <form onSubmit={submit} className="flex-1 overflow-auto p-4 lg:p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <select className="field-input" value={form.tipo} onChange={(e) => setField('tipo', e.target.value)}>
-            <option value={TipoBeneficiario.TRABAJADOR}>Trabajador(a)</option>
-            <option value={TipoBeneficiario.HIJO}>Hija/Hijo</option>
-            <option value={TipoBeneficiario.JUBILADO_PENSIONADO}>Jubilado/Pensionado</option>
-          </select>
-          <input className="field-input" placeholder="Nombre(s)" value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} />
-          <input className="field-input" placeholder="Apellido paterno" value={form.apellidoPaterno} onChange={(e) => setField('apellidoPaterno', e.target.value)} />
-          <input className="field-input" placeholder="Apellido materno" value={form.apellidoMaterno} onChange={(e) => setField('apellidoMaterno', e.target.value)} />
-          <input className="field-input" placeholder="NSS titular" inputMode="numeric" value={form.nssTrabajador} onChange={(e) => setField('nssTrabajador', e.target.value)} />
-          <input className="field-input" placeholder="NSS hija/hijo" inputMode="numeric" value={form.nssHijo} onChange={(e) => setField('nssHijo', e.target.value)} />
-          <input className="field-input md:col-span-2" placeholder="Titular nombre completo" value={form.titularNombreCompleto} onChange={(e) => setField('titularNombreCompleto', e.target.value)} />
-          <input className="field-input" type="date" value={form.fechaNacimiento} onChange={(e) => setField('fechaNacimiento', e.target.value)} />
-          <input className="field-input" placeholder="Unidad/adscripcion" value={form.entidadLaboral} onChange={(e) => setField('entidadLaboral', e.target.value)} />
-          <input className="field-input" placeholder="OOAD" value={form.ooad} onChange={(e) => setField('ooad', e.target.value)} />
-          <input className="field-input" placeholder="Matricula" value={form.matricula} onChange={(e) => setField('matricula', e.target.value)} />
-          <input className="field-input" placeholder="Clave adscripcion" value={form.claveAdscripcion} onChange={(e) => setField('claveAdscripcion', e.target.value)} />
-          <input className="field-input" placeholder="Tipo contratacion" value={form.tipoContratacion} onChange={(e) => setField('tipoContratacion', e.target.value)} />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tipo beneficiario</p>
+            <select className="field-input" value={form.tipo} onChange={(e) => setField('tipo', e.target.value)}>
+              <option value={TipoBeneficiario.TRABAJADOR}>Trabajador(a)</option>
+              <option value={TipoBeneficiario.HIJO}>Hija/Hijo</option>
+              <option value={TipoBeneficiario.JUBILADO_PENSIONADO}>Jubilado/Pensionado</option>
+            </select>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Nombre(s)</p>
+            <input className="field-input" placeholder="Nombre(s)" value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Apellido paterno</p>
+            <input className="field-input" placeholder="Apellido paterno" value={form.apellidoPaterno} onChange={(e) => setField('apellidoPaterno', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Apellido materno</p>
+            <input className="field-input" placeholder="Apellido materno" value={form.apellidoMaterno} onChange={(e) => setField('apellidoMaterno', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">NSS titular</p>
+            <input className="field-input" placeholder="NSS titular" inputMode="numeric" value={form.nssTrabajador} onChange={(e) => setField('nssTrabajador', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">NSS hija/hijo</p>
+            <input className="field-input" placeholder="NSS hija/hijo" inputMode="numeric" value={form.nssHijo} onChange={(e) => setField('nssHijo', e.target.value)} />
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Titular nombre completo</p>
+            <input className="field-input md:col-span-2" placeholder="Titular nombre completo" value={form.titularNombreCompleto} onChange={(e) => setField('titularNombreCompleto', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Fecha nacimiento</p>
+            <input className="field-input" type="date" value={form.fechaNacimiento} onChange={(e) => setField('fechaNacimiento', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Unidad/adscripcion</p>
+            <input className="field-input" placeholder="Unidad/adscripcion" value={form.entidadLaboral} onChange={(e) => setField('entidadLaboral', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">OOAD</p>
+            <input className="field-input" placeholder="OOAD" value={form.ooad} onChange={(e) => setField('ooad', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Matricula</p>
+            <input className="field-input" placeholder="Matricula" value={form.matricula} onChange={(e) => setField('matricula', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Clave adscripcion</p>
+            <input className="field-input" placeholder="Clave adscripcion" value={form.claveAdscripcion} onChange={(e) => setField('claveAdscripcion', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tipo contratacion</p>
+            <input className="field-input" placeholder="Tipo contratacion" value={form.tipoContratacion} onChange={(e) => setField('tipoContratacion', e.target.value)} />
+          </div>
           <label className="text-xs font-bold flex items-center gap-2"><input type="checkbox" checked={form.requiereConstanciaEstudios} onChange={(e) => setField('requiereConstanciaEstudios', e.target.checked)} />Requiere constancia</label>
           <label className="text-xs font-bold flex items-center gap-2"><input type="checkbox" checked={form.constanciaEstudiosVigente} onChange={(e) => setField('constanciaEstudiosVigente', e.target.checked)} />Constancia vigente</label>
-          <input className="field-input" type="date" value={form.fechaConstanciaEstudios} onChange={(e) => setField('fechaConstanciaEstudios', e.target.value)} />
-          <input className="field-input md:col-span-2" placeholder="Contrato colectivo aplicable" value={form.contratoColectivoAplicable} onChange={(e) => setField('contratoColectivoAplicable', e.target.value)} />
-          <input className="field-input" placeholder="Folio receta IMSS" value={form.folioRecetaImss} onChange={(e) => setField('folioRecetaImss', e.target.value)} />
-          <input className="field-input" type="date" value={form.fechaExpedicionReceta} onChange={(e) => setField('fechaExpedicionReceta', e.target.value)} />
-          <textarea className="field-input md:col-span-2 min-h-24" placeholder="Descripcion del lente" value={form.descripcionLente} onChange={(e) => setField('descripcionLente', e.target.value)} />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Fecha constancia estudios</p>
+            <input className="field-input" type="date" value={form.fechaConstanciaEstudios} onChange={(e) => setField('fechaConstanciaEstudios', e.target.value)} />
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Contrato colectivo aplicable</p>
+            <input className="field-input md:col-span-2" placeholder="Contrato colectivo aplicable" value={form.contratoColectivoAplicable} onChange={(e) => setField('contratoColectivoAplicable', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Folio receta IMSS</p>
+            <input className="field-input" placeholder="Folio receta IMSS" value={form.folioRecetaImss} onChange={(e) => setField('folioRecetaImss', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Fecha expedicion receta</p>
+            <input className="field-input" type="date" value={form.fechaExpedicionReceta} onChange={(e) => setField('fechaExpedicionReceta', e.target.value)} />
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Descripcion del lente</p>
+            <textarea className="field-input md:col-span-2 min-h-24" placeholder="Descripcion del lente" value={form.descripcionLente} onChange={(e) => setField('descripcionLente', e.target.value)} />
+          </div>
           {/* medicion de anteojos no se captura en unidad */}
-          <input className="field-input" placeholder="Qna/Mes inclusion" value={form.qnaInclusion} onChange={(e) => setField('qnaInclusion', e.target.value)} />
-          <input className="field-input" type="date" value={form.fechaRecepcionOptica} onChange={(e) => setField('fechaRecepcionOptica', e.target.value)} />
-          <input className="field-input" type="date" value={form.fechaEntregaOptica} onChange={(e) => setField('fechaEntregaOptica', e.target.value)} />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Qna/Mes inclusion</p>
+            <input className="field-input" placeholder="Qna/Mes inclusion" value={form.qnaInclusion} onChange={(e) => setField('qnaInclusion', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Fecha recepcion optica</p>
+            <input className="field-input" type="date" value={form.fechaRecepcionOptica} onChange={(e) => setField('fechaRecepcionOptica', e.target.value)} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Fecha entrega optica</p>
+            <input className="field-input" type="date" value={form.fechaEntregaOptica} onChange={(e) => setField('fechaEntregaOptica', e.target.value)} />
+          </div>
 
           <div className="md:col-span-2 flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" disabled={loading}>Cancelar</button>
