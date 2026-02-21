@@ -1172,6 +1172,9 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
   }, [tramite.id]);
 
   const canApprove = false;
+  const tipoContratacionTitular = tramite.beneficiario?.tipoContratacion
+    || historicalDotations.find((d: Tramite) => String(d?.beneficiario?.tipoContratacion || '').trim())?.beneficiario?.tipoContratacion
+    || 'SIN CAPTURA';
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1236,7 +1239,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                       <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Nombre del solicitante</p><p className="font-black text-slate-800 text-xl uppercase leading-tight">{[tramite.beneficiario?.nombre, tramite.beneficiario?.apellidoPaterno, tramite.beneficiario?.apellidoMaterno].filter(Boolean).join(' ')}</p></div>
                       <div className="grid grid-cols-2 gap-6">
                         <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Tipo beneficiario</p><p className="font-black text-slate-800 uppercase text-lg">{tramite.beneficiario?.tipo === TipoBeneficiario.HIJO ? 'HIJA/HIJO' : tramite.beneficiario?.tipo === TipoBeneficiario.TRABAJADOR ? 'PERSONA TRABAJADORA' : 'JUBILADA/PENSIONADA'}</p></div>
-                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Tipo de contratación titular</p><p className="font-black text-slate-800 uppercase text-lg">{tramite.beneficiario?.tipoContratacion || 'SIN CAPTURA'}</p></div>
+                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Tipo de contratación titular</p><p className="font-black text-slate-800 uppercase text-lg">{tipoContratacionTitular}</p></div>
                       </div>
                       <div className="grid grid-cols-2 gap-6">
                         <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">NSS titular</p><p className="font-black text-imss text-lg tracking-widest">{tramite.beneficiario?.nssTrabajador || 'SIN NSS'}</p></div>
@@ -1717,6 +1720,7 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
       if (!beneficiario.titularNombreCompleto?.trim()) return 'Captura nombre completo de la persona trabajadora titular.';
       if (!beneficiario.matricula?.trim()) return 'Captura la matricula de la persona trabajadora titular.';
       if (!beneficiario.claveAdscripcion?.trim()) return 'Captura la clave de adscripcion de la persona trabajadora titular.';
+      if (!beneficiario.tipoContratacion?.trim()) return 'Captura el tipo de contratacion de la persona trabajadora titular.';
       if (!beneficiario.nssHijo?.trim() || !/^\d{10,11}$/.test(beneficiario.nssHijo.trim())) return 'El NSS de hija/hijo debe tener 10 u 11 digitos.';
       if (!beneficiario.fechaNacimiento) return 'Captura fecha de nacimiento de hija/hijo.';
       if (requiereConstanciaEstudios) {
@@ -1917,6 +1921,15 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
                     <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
                       value={beneficiario.claveAdscripcion}
                       onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, claveAdscripcion: e.target.value }); }} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Tipo de contratacion titular</label>
+                    <select className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss font-black text-slate-800"
+                      value={beneficiario.tipoContratacion}
+                      onChange={(e) => { setStepError(''); setBeneficiario({ ...beneficiario, tipoContratacion: e.target.value }); }}>
+                      <option value="">Selecciona...</option>
+                      {TIPOS_CONTRATACION_PERMITIDOS.map((t) => <option key={t.code} value={t.label}>{t.code} - {t.label}</option>)}
+                    </select>
                   </div>
                 </>
               )}
