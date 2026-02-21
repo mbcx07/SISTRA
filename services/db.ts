@@ -677,9 +677,12 @@ export const dbService = {
           throw new Error(`No se puede registrar una nueva solicitud. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
         }
 
+        const nextDotacionNumero = Math.min(4, historialMismoContrato.length + 1);
         const docRef = await addDoc(collection(db, "tramites"), {
           ...tramite,
           contratoColectivoAplicable: contrato,
+          dotacionNumero: nextDotacionNumero,
+          requiereDictamenMedico: nextDotacionNumero >= 3,
           creadorId: user.id,
           unidad: user.unidad
         });

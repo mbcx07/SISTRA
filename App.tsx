@@ -632,7 +632,11 @@ const App: React.FC = () => {
            ) : (
              <PDFTarjetaControlView 
                beneficiario={selectedTramite.beneficiario}
-               dotaciones={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
+               dotaciones={(() => {
+                 const base = tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador);
+                 if (selectedTramite.id) return base;
+                 return [...base, selectedTramite];
+               })()}
              />
            )}
         </div>
@@ -1949,8 +1953,13 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
 
   const handlePrintHistorial = async () => {
     if (!draftTramite) return;
+    const draftForPreview: Tramite = {
+      ...draftTramite,
+      dotacionNumero: Math.min(4, totalMismoContrato + 1),
+      requiereDictamenMedico: Math.min(4, totalMismoContrato + 1) >= 3
+    };
     saveWizardSnapshot();
-    onPreviewPrint(draftTramite, 'tarjeta');
+    onPreviewPrint(draftForPreview, 'tarjeta');
   };
 
   const resetWizard = () => {
@@ -1995,7 +2004,12 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
       return;
     }
 
-    const saved = await onSave(draftTramite, { redirectToTramites: false });
+    const tramiteToSave: Tramite = {
+      ...draftTramite,
+      dotacionNumero: Math.min(4, totalMismoContrato + 1),
+      requiereDictamenMedico: Math.min(4, totalMismoContrato + 1) >= 3
+    };
+    const saved = await onSave(tramiteToSave, { redirectToTramites: false });
     if (!saved) return;
     await onPrint(saved, 'formato');
     resetWizard();
