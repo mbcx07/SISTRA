@@ -752,7 +752,7 @@ const App: React.FC = () => {
           </header>
 
           <div className="flex-1 overflow-auto p-4 lg:p-10">
-            {uiMessage && (
+            {uiMessage && activeTab !== 'nuevo' && (
               <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 px-5 py-4 text-sm font-bold flex items-center justify-between">
                 <span>{uiMessage}</span>
                 <button className="text-xs uppercase" onClick={() => setUiMessage(null)}>Cerrar</button>
@@ -769,7 +769,7 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
-            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} tramites={tramites} cctCatalog={cctCatalog} onSave={handleCreateTramite} onPrint={handlePrintForTramite} onPreviewPrint={handlePreviewPrint} onImprocedente={handleImprocedenteIntent} /> : <AccessDeniedView />)}
+            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} tramites={tramites} cctCatalog={cctCatalog} uiMessage={uiMessage} clearUiMessage={() => setUiMessage(null)} onSave={handleCreateTramite} onPrint={handlePrintForTramite} onPreviewPrint={handlePreviewPrint} onImprocedente={handleImprocedenteIntent} /> : <AccessDeniedView />)}
             {/* central view removida por operacion */}
             {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} cctCatalog={cctCatalog} onSaveCctCatalog={setCctCatalog} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
           </div>
@@ -1686,7 +1686,7 @@ const TabButton = ({ label, active, onClick }: any) => (
   <button onClick={onClick} className={`whitespace-nowrap px-4 lg:px-10 py-4 lg:py-5 text-[10px] font-black uppercase tracking-widest transition-all border-b-4 ${active ? 'border-imss text-imss bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>{label}</button>
 );
 
-const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPreviewPrint, onImprocedente }: any) => {
+const NuevoTramiteWizard = ({ user, tramites, cctCatalog, uiMessage, clearUiMessage, onSave, onPrint, onPreviewPrint, onImprocedente }: any) => {
   const WIZARD_SNAPSHOT_KEY = 'sistra.nuevoWizardSnapshot';
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string>('');
@@ -1735,6 +1735,10 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
       setReceta((prev) => ({ ...prev, contratoColectivoAplicable: cctCatalog[0] }));
     }
   }, [cctCatalog]);
+
+  useEffect(() => {
+    if (uiMessage) clearUiMessage?.();
+  }, []);
 
   useEffect(() => {
     try {
@@ -2036,6 +2040,12 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPre
         {stepError && (
           <div className="mb-8 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold" role="alert">
             {stepError}
+          </div>
+        )}
+        {uiMessage && (
+          <div className="mb-8 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold flex items-center justify-between gap-3" role="status">
+            <span>{uiMessage}</span>
+            <button type="button" className="text-[11px] uppercase" onClick={clearUiMessage}>Cerrar</button>
           </div>
         )}
         {step === 1 && (
