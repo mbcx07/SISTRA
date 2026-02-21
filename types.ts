@@ -71,6 +71,7 @@ export interface Tramite {
   folio: string; // OOAD-UNIDAD-AÑO-CONSECUTIVO
   beneficiario: Beneficiario;
   contratoColectivoAplicable: string;
+  lugarSolicitud?: string;
   fechaCreacion: string;
   creadorId: string;
   unidad: string;

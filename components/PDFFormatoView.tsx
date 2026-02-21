@@ -48,7 +48,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-4">
-        <div><p className="font-bold mb-1">Lugar</p><div className="border-b border-black h-6 flex items-end justify-center font-semibold">{valueOrEmpty(b.entidadLaboral)}</div></div>
+        <div><p className="font-bold mb-1">Lugar</p><div className="border-b border-black h-6 flex items-end justify-center font-semibold">{valueOrEmpty(tramite.lugarSolicitud || b.entidadLaboral)}</div></div>
         <div><p className="font-bold mb-1">Fecha elaboracion</p><div className="border-b border-black h-6 flex items-end justify-center font-semibold">{formatDate(tramite.fechaCreacion)}</div></div>
         <div><p className="font-bold mb-1">Clave presupuestal unidad</p><div className="border-b border-black h-6 flex items-end justify-center font-semibold">{valueOrEmpty(tramite.clavePresupuestal)}</div></div>
       </div>

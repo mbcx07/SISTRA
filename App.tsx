@@ -953,92 +953,51 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
   </button>
 );
 
-const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUpdatePresupuesto, resumenSolicitudesPorUnidad }: any) => {
-  const avancePct = presupuestoGlobal > 0 ? Math.min(100, (Number(gastoMetrics.global || 0) / presupuestoGlobal) * 100) : 0;
-  const semaforo = avancePct >= 90
-    ? { label: 'Rojo', badge: 'bg-red-100 text-red-700 border-red-200' }
-    : avancePct >= 80
-      ? { label: 'Amarillo', badge: 'bg-amber-100 text-amber-700 border-amber-200' }
-      : { label: 'Verde', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+const DashboardView = ({ presupuestoGlobal, onUpdatePresupuesto, resumenSolicitudesPorUnidad }: any) => {
+  const totalSolicitudes = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalSolicitudes || 0), 0);
+  const totalImporte = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalCosto || 0), 0);
 
   return (
-  <div className="space-y-10 animate-in fade-in duration-700">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-      <StatCard label="Total Cloud" value={stats.total} icon={<FileText className="text-imss" />} color="imss" />
-      <StatCard label="Por Validar" value={stats.pendientes} icon={<Clock className="text-amber-600" />} color="amber" />
-      <StatCard label="Autorizados" value={stats.autorizados} icon={<CheckCircle2 className="text-emerald-600" />} color="emerald" />
-      <StatCard label="Entregados" value={stats.entregados} icon={<LogOut className="text-slate-600" />} color="slate" />
-      <StatCard label="Gasto Global" value={`$${Number(gastoMetrics.global || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} icon={<DollarSign className="text-imss" />} color="imss" />
-    </div>
-
-    <div className="bg-white rounded-[32px] border border-slate-100 p-6 lg:p-8 shadow-sm">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-end">
-        <div>
-          <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto global editable</label>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={presupuestoGlobal}
-            onChange={(e) => onUpdatePresupuesto(Number(e.target.value || 0))}
-            className="w-full p-3 rounded-xl border-2 border-slate-200 font-black text-imss"
-          />
-        </div>
-        <div>
-          <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Avance de consumo</p>
-          <div className="flex items-center gap-3">
-            <p className="text-2xl font-black text-slate-800">{avancePct.toFixed(2)}%</p>
-            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${semaforo.badge}`}>{semaforo.label}</span>
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="bg-white rounded-[32px] border border-slate-100 p-6 lg:p-8 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-end">
+          <div>
+            <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto global editable</label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={presupuestoGlobal}
+              onChange={(e) => onUpdatePresupuesto(Number(e.target.value || 0))}
+              className="w-full p-3 rounded-xl border-2 border-slate-200 font-black text-imss"
+            />
           </div>
-        </div>
-        <div>
-          <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Disponible estimado</p>
-          <p className="text-2xl font-black text-emerald-700">${Math.max(0, presupuestoGlobal - Number(gastoMetrics.global || 0)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <div>
+            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Total solicitudes</p>
+            <p className="text-2xl font-black text-slate-800">{totalSolicitudes}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Importe total solicitudes</p>
+            <p className="text-2xl font-black text-imss">{formatCurrency(totalImporte)}</p>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <div className="bg-white p-12 rounded-[50px] border border-slate-100 shadow-sm min-h-[500px] flex flex-col">
-       <div className="flex items-center justify-between mb-12">
-          <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Indicadores de Gestión Nacional</h3>
-          <div className="flex items-center gap-3">
-             <div className="w-3 h-3 bg-imss rounded-full"></div>
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tramites Activos</span>
-          </div>
-       </div>
-       <div className="flex-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 900, fill: '#64748b'}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 900, fill: '#64748b'}} />
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)'}} />
-              <Bar dataKey="value" fill="#006747" radius={[15, 15, 0, 0]} barSize={60} />
-            </BarChart>
-          </ResponsiveContainer>
-       </div>
-    </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <SimpleSpendTable title="Gasto por Unidad" rows={(gastoMetrics.porUnidad || []).map((x: any) => ({ label: x.unidad, value: x.total }))} />
-      <SimpleSpendTable title="Gasto por Periodo" rows={(gastoMetrics.porPeriodo || []).map((x: any) => ({ label: x.periodo, value: x.total }))} />
       <div className="bg-white rounded-[40px] border border-slate-100 p-8">
-        <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-6">Solicitudes por Unidad</h4>
-        <div className="space-y-3 max-h-64 overflow-auto">
+        <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-6">Resumen por unidad (cantidad e importe)</h4>
+        <div className="space-y-3 max-h-80 overflow-auto">
           {(resumenSolicitudesPorUnidad || []).length ? (resumenSolicitudesPorUnidad || []).map((r: any, idx: number) => (
-            <div key={`${r.unidad}-${idx}`} className="p-3 bg-slate-50 rounded-xl">
+            <div key={`${r.unidad}-${idx}`} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between gap-4">
               <p className="text-xs font-black uppercase text-slate-700">{r.unidad}</p>
               <p className="text-[11px] font-bold text-slate-600">Solicitudes: {r.totalSolicitudes}</p>
-              <p className="text-[11px] font-bold text-imss">Costo acumulado: {formatCurrency(r.totalCosto)}</p>
+              <p className="text-[11px] font-bold text-imss">Importe: {formatCurrency(r.totalCosto)}</p>
             </div>
           )) : <p className="text-xs text-slate-400 font-bold">Sin solicitudes por unidad.</p>}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
-
 const StatCard = ({ label, value, icon, color }: any) => {
   const bgColors: any = { imss: 'bg-imss-light', amber: 'bg-amber-100', emerald: 'bg-emerald-100', slate: 'bg-slate-100' };
   return (
@@ -1531,7 +1490,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     entidadLaboral: user.unidad,
     ooad: user.ooad
   });
-  const [receta, setReceta] = useState({ folio: '', descripcion: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', dotacionNo: 1 });
+  const [receta, setReceta] = useState({ folio: '', descripcion: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', clavePresupuestal: '', lugarSolicitud: '', dotacionNo: 1 });
 
   const edadBeneficiario = useMemo(() => {
     if (!beneficiario.fechaNacimiento) return null;
@@ -1595,6 +1554,8 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     if (!receta.contratoColectivoAplicable?.trim()) return 'Captura el contrato colectivo aplicable.';
     if (!receta.qnaInclusion?.trim()) return 'Captura la Qna/Mes de inclusion.';
     if (!receta.fechaExpedicionReceta) return 'Captura la fecha de expedicion de receta.';
+    if (!receta.clavePresupuestal?.trim()) return 'Captura la clave presupuestal de la receta medica.';
+    if (!receta.lugarSolicitud?.trim()) return 'Captura el lugar de solicitud (ciudad y estado).';
     return '';
   };
 
@@ -1630,6 +1591,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
         requiereConstanciaEstudios
       },
       contratoColectivoAplicable: receta.contratoColectivoAplicable.trim(),
+      lugarSolicitud: receta.lugarSolicitud.trim(),
       fechaCreacion: new Date().toISOString(),
       creadorId: user.id,
       unidad: user.unidad,
@@ -1643,7 +1605,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       descripcionLente: receta.descripcion,
       // medicion de anteojos se captura por proveedor fuera del formato oficial,
       qnaInclusion: receta.qnaInclusion.trim(),
-      clavePresupuestal: '1A14-009-027',
+      clavePresupuestal: receta.clavePresupuestal.trim(),
       checklist: {} as any,
       evidencias: [],
     };
@@ -1821,6 +1783,14 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Fecha expedicion de receta</label>
               <input type="date" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black text-slate-800 shadow-inner" value={receta.fechaExpedicionReceta} onChange={(e) => { setStepError(''); setReceta({ ...receta, fechaExpedicionReceta: e.target.value }); }} />
             </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Clave presupuestal (receta medica)</label>
+              <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.clavePresupuestal} onChange={(e) => { setStepError(''); setReceta({ ...receta, clavePresupuestal: e.target.value }); }} />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Lugar de solicitud (ciudad y estado)</label>
+              <input className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.lugarSolicitud} onChange={(e) => { setStepError(''); setReceta({ ...receta, lugarSolicitud: e.target.value }); }} />
+            </div>
             {/* campo de medicion removido por requerimiento operativo */}
             <div className="flex gap-6">
               <button onClick={() => goToStep(1)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Atrás</button>
@@ -1861,6 +1831,7 @@ const CentralView = ({ tramites }: any) => (
 );
 
 export default App;
+
 
 
 
