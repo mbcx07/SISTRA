@@ -68,6 +68,8 @@ const formatStatusLabel = (estatus: string) => {
   return String(estatus || '').replace(/_/g, ' ');
 };
 
+const formatCurrency = (value: number) => `$${Number(value || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers'>('dashboard');
   const [user, setUser] = useState<User | null>(null);
@@ -223,6 +225,20 @@ const App: React.FC = () => {
     { name: 'Entregados', value: stats.entregados },
     { name: 'Rechazados', value: stats.rechazados }
   ];
+
+  const resumenSolicitudesPorUnidad = useMemo(() => {
+    const map = (tramites || []).reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, t: Tramite) => {
+      const unidad = t.unidad || t.beneficiario?.entidadLaboral || 'SIN_UNIDAD';
+      if (!acc[unidad]) acc[unidad] = { totalSolicitudes: 0, totalCosto: 0 };
+      acc[unidad].totalSolicitudes += 1;
+      acc[unidad].totalCosto += Number(t.costoSolicitud || 0);
+      return acc;
+    }, {});
+
+    return Object.entries(map)
+      .map(([unidad, val]) => ({ unidad, totalSolicitudes: val.totalSolicitudes, totalCosto: val.totalCosto }))
+      .sort((a, b) => a.unidad.localeCompare(b.unidad));
+  }, [tramites]);
 
   const handleLogin = async (matricula: string, password: string) => {
     setLoading(true);
@@ -471,6 +487,26 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateCostoSolicitud = async (tramiteId: string, costoSolicitud: number) => {
+    if (!user || user.role !== Role.ADMIN_SISTEMA) {
+      setUiMessage('Solo ADMIN_SISTEMA puede editar el costo de solicitud.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await dbService.saveTramite({ id: tramiteId, costoSolicitud: Number(costoSolicitud || 0) } as Partial<Tramite>);
+      await loadData();
+      const refreshed = (await dbService.getTramites()).find((t) => t.id === tramiteId);
+      if (refreshed) setSelectedTramite(refreshed);
+      setUiMessage('Costo de solicitud actualizado.');
+    } catch (e: any) {
+      setUiMessage(e?.message || 'No se pudo actualizar el costo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // VISTAS DE CARGA Y ERROR
   if (loading && !user) {
     return (
@@ -649,6 +685,7 @@ const App: React.FC = () => {
                 gastoMetrics={gastoMetrics}
                 presupuestoGlobal={presupuestoGlobal}
                 onUpdatePresupuesto={setPresupuestoGlobal}
+                resumenSolicitudesPorUnidad={resumenSolicitudesPorUnidad}
               />
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
@@ -680,6 +717,7 @@ const App: React.FC = () => {
             onUpdateEstatus={handleUpdateEstatus}
             onEditCapture={handleEditCapture}
             onDeleteTramite={handleDeleteTramite}
+            onUpdateCostoSolicitud={handleUpdateCostoSolicitud}
             onPrint={handlePrintRequest}
             historicalDotations={tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador)}
             loading={loading}
@@ -915,7 +953,7 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
   </button>
 );
 
-const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUpdatePresupuesto }: any) => {
+const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUpdatePresupuesto, resumenSolicitudesPorUnidad }: any) => {
   const avancePct = presupuestoGlobal > 0 ? Math.min(100, (Number(gastoMetrics.global || 0) / presupuestoGlobal) * 100) : 0;
   const semaforo = avancePct >= 90
     ? { label: 'Rojo', badge: 'bg-red-100 text-red-700 border-red-200' }
@@ -981,9 +1019,21 @@ const DashboardView = ({ stats, chartData, gastoMetrics, presupuestoGlobal, onUp
        </div>
     </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <SimpleSpendTable title="Gasto por Unidad" rows={(gastoMetrics.porUnidad || []).map((x: any) => ({ label: x.unidad, value: x.total }))} />
       <SimpleSpendTable title="Gasto por Periodo" rows={(gastoMetrics.porPeriodo || []).map((x: any) => ({ label: x.periodo, value: x.total }))} />
+      <div className="bg-white rounded-[40px] border border-slate-100 p-8">
+        <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-6">Solicitudes por Unidad</h4>
+        <div className="space-y-3 max-h-64 overflow-auto">
+          {(resumenSolicitudesPorUnidad || []).length ? (resumenSolicitudesPorUnidad || []).map((r: any, idx: number) => (
+            <div key={`${r.unidad}-${idx}`} className="p-3 bg-slate-50 rounded-xl">
+              <p className="text-xs font-black uppercase text-slate-700">{r.unidad}</p>
+              <p className="text-[11px] font-bold text-slate-600">Solicitudes: {r.totalSolicitudes}</p>
+              <p className="text-[11px] font-bold text-imss">Costo acumulado: {formatCurrency(r.totalCosto)}</p>
+            </div>
+          )) : <p className="text-xs text-slate-400 font-bold">Sin solicitudes por unidad.</p>}
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -1028,6 +1078,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Identificador</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Solicitante</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-center">Estatus Cloud</th>
+          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">Costo solicitud</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">Accion</th>
         </tr>
       </thead>
@@ -1048,6 +1099,9 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
               </span>
             </td>
             <td className="px-10 py-8 text-right">
+              <p className="text-xs font-black text-slate-700">{formatCurrency(Number(t.costoSolicitud || 0))}</p>
+            </td>
+            <td className="px-10 py-8 text-right">
               <button aria-label={`Abrir detalle del folio ${t.folio}`} className="p-4 bg-slate-100 rounded-2xl text-slate-400 group-hover:bg-imss group-hover:text-white transition-all shadow-sm">
                 <ChevronRight size={20} />
               </button>
@@ -1055,7 +1109,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
           </tr>
         )) : (
           <tr>
-            <td colSpan={4} className="px-10 py-32 text-center text-slate-400 font-black uppercase tracking-[0.2em]">
+            <td colSpan={5} className="px-10 py-32 text-center text-slate-400 font-black uppercase tracking-[0.2em]">
               {searchTerm ? `Sin coincidencias para "${searchTerm}".` : 'Sin registros sincronizados'}
             </td>
           </tr>
@@ -1066,9 +1120,10 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
   </div>
 );
 
-const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCapture, onDeleteTramite, onPrint, historicalDotations, loading }: any) => {
+const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCapture, onDeleteTramite, onUpdateCostoSolicitud, onPrint, historicalDotations, loading }: any) => {
   const [activeTab, setActiveTab] = useState<'info' | 'Bitácora' | 'tarjeta'>('info');
   const [Bitácora, setBitácora] = useState<Bitácora[]>([]);
+  const [costoSolicitud, setCostoSolicitud] = useState<number>(Number(tramite.costoSolicitud || 0));
   // control de importe se Gestióna fuera de la unidad
 
   useEffect(() => {
@@ -1157,7 +1212,26 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                       <p className="text-sm font-black text-slate-800">{tramite.contratoColectivoAplicable || 'SIN CAPTURA'}</p>
                       <p className="text-[10px] text-slate-500 font-bold">Dotaciones registradas para este contrato: {historicalDotations.filter((d: Tramite) => String(d.contratoColectivoAplicable || '').trim().toUpperCase() === String(tramite.contratoColectivoAplicable || '').trim().toUpperCase()).length} de 2</p>
                     </div>
-                    {/* medicion de anteojos no aplica en captura de unidad */}
+                    <div className="bg-white rounded-2xl p-5 border border-slate-100 space-y-3">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Costo de solicitud</p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={costoSolicitud}
+                          onChange={(e) => setCostoSolicitud(Number(e.target.value || 0))}
+                          disabled={user.role !== Role.ADMIN_SISTEMA}
+                          className="w-full p-3 rounded-xl border border-slate-200 font-black text-slate-800 disabled:bg-slate-100"
+                        />
+                        {user.role === Role.ADMIN_SISTEMA && (
+                          <button
+                            className="px-3 py-2 rounded-xl bg-imss text-white text-xs font-black"
+                            onClick={() => onUpdateCostoSolicitud(tramite.id, costoSolicitud)}
+                          >Guardar</button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1563,6 +1637,7 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
       dotacionNumero: receta.dotacionNo,
       requiereDictamenMedico: receta.dotacionNo >= 3,
       importeSolicitado: 0,
+      costoSolicitud: 0,
       folioRecetaImss: receta.folio,
       fechaExpedicionReceta: new Date(receta.fechaExpedicionReceta).toISOString(),
       descripcionLente: receta.descripcion,

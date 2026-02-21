@@ -82,6 +82,7 @@ export interface Tramite {
   // Control de importes
   importeSolicitado: number;
   importeAutorizado?: number;
+  costoSolicitud?: number;
   validadoPor?: string;
   fechaValidacionImporte?: string;
   
