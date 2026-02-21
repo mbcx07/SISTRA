@@ -25,23 +25,73 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
     <div className="w-6 h-6 border border-black flex items-center justify-center text-xs font-black">{checked ? 'X' : ''}</div>
   );
 
-  const DotacionColumn = ({ num, label }: { num: number; label: string }) => {
+  const dotData = (num: number) => {
     const data = getDotacionData(num);
     const firmaTitular = data
       ? (valueOrEmpty(data?.beneficiario?.titularNombreCompleto)
         || valueOrEmpty(b.titularNombreCompleto)
         || `${valueOrEmpty(data?.beneficiario?.apellidoPaterno)} ${valueOrEmpty(data?.beneficiario?.apellidoMaterno)} ${valueOrEmpty(data?.beneficiario?.nombre)}`.trim())
       : '';
+    return {
+      receta: valueOrEmpty(data?.folioRecetaImss),
+      anteojos: valueOrEmpty(data?.descripcionLente),
+      folio: valueOrEmpty(data?.folio),
+      fecha: formatDate(data?.fechaCreacion),
+      qna: valueOrEmpty(data?.qnaInclusion),
+      firmaTitular,
+    };
+  };
+
+  const DotacionPairTable = ({ a, b: bNum, labelA, labelB }: { a: number; b: number; labelA: string; labelB: string }) => {
+    const da = dotData(a);
+    const db = dotData(bNum);
     return (
-      <div className="flex flex-col border-r border-black last:border-r-0 min-w-0">
-        <div className="h-7 px-1 flex items-center justify-center text-center font-bold border-b border-black text-[9px] overflow-hidden">{label}</div>
-        <div className="h-8 flex items-center justify-center font-bold px-1 text-center border-b border-black overflow-hidden whitespace-nowrap text-ellipsis">{valueOrEmpty(data?.folioRecetaImss)}</div>
-        <div className="h-12 flex items-center justify-center px-1 text-center font-bold leading-tight break-words border-b border-black overflow-hidden">{valueOrEmpty(data?.descripcionLente)}</div>
-        <div className="h-8 flex items-center justify-center font-bold px-1 text-center border-b border-black overflow-hidden whitespace-nowrap text-ellipsis">{valueOrEmpty(data?.folio)}</div>
-        <div className="h-8 flex items-center justify-center font-bold border-b border-black overflow-hidden whitespace-nowrap">{formatDate(data?.fechaCreacion)}</div>
-        <div className="h-8 flex items-center justify-center font-bold border-b border-black overflow-hidden whitespace-nowrap">{valueOrEmpty(data?.qnaInclusion)}</div>
-        <div className="h-14 flex items-end justify-center pb-1 px-1 text-center text-[8px] font-bold overflow-hidden break-words">{firmaTitular}</div>
-      </div>
+      <table className="w-full border-2 border-black border-collapse table-fixed mb-3 text-[9px]">
+        <colgroup>
+          <col style={{ width: '27%' }} />
+          <col style={{ width: '36.5%' }} />
+          <col style={{ width: '36.5%' }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th className="h-7 border border-black" />
+            <th className="h-7 border border-black font-bold text-center px-1">{labelA}</th>
+            <th className="h-7 border border-black font-bold text-center px-1">{labelB}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="h-8 border border-black font-bold px-2 align-middle">Receta No.</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{da.receta}</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{db.receta}</td>
+          </tr>
+          <tr>
+            <td className="h-12 border border-black font-bold px-2 align-middle">Tipo de anteojos</td>
+            <td className="h-12 border border-black font-bold text-center px-1 align-middle break-words">{da.anteojos}</td>
+            <td className="h-12 border border-black font-bold text-center px-1 align-middle break-words">{db.anteojos}</td>
+          </tr>
+          <tr>
+            <td className="h-8 border border-black font-bold px-2 align-middle">Folio</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{da.folio}</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{db.folio}</td>
+          </tr>
+          <tr>
+            <td className="h-8 border border-black font-bold px-2 align-middle">Fecha</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{da.fecha}</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{db.fecha}</td>
+          </tr>
+          <tr>
+            <td className="h-8 border border-black font-bold px-2 align-middle">Qna/Mes inclusion</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{da.qna}</td>
+            <td className="h-8 border border-black font-bold text-center px-1 align-middle">{db.qna}</td>
+          </tr>
+          <tr>
+            <td className="h-14 border border-black font-bold px-2 align-top py-1 text-[8px] leading-tight">Firma de la persona trabajadora, jubilada o pensionada</td>
+            <td className="h-14 border border-black font-bold text-center px-1 align-bottom pb-1 text-[8px] break-words">{da.firmaTitular}</td>
+            <td className="h-14 border border-black font-bold text-center px-1 align-bottom pb-1 text-[8px] break-words">{db.firmaTitular}</td>
+          </tr>
+        </tbody>
+      </table>
     );
   };
 
@@ -80,37 +130,8 @@ export const PDFTarjetaControlView: React.FC<PDFTarjetaControlViewProps> = ({ be
         
       </div>
 
-      <div className="border-2 border-black flex mb-3 overflow-hidden">
-        <div className="w-[27%] flex flex-col border-r border-black divide-y divide-black font-bold text-[9px]">
-          <div className="h-7" />
-          <div className="h-8 flex items-center px-2">Receta No.</div>
-          <div className="h-12 flex items-center px-2">Tipo de anteojos</div>
-          <div className="h-8 flex items-center px-2">Folio</div>
-          <div className="h-8 flex items-center px-2">Fecha</div>
-          <div className="h-8 flex items-center px-2">Qna/Mes inclusion</div>
-          <div className="h-14 flex items-start px-2 py-1 text-[8px] leading-tight">Firma de la persona trabajadora, jubilada o pensionada</div>
-        </div>
-        <div className="flex-1 grid grid-cols-2">
-          <DotacionColumn num={1} label="Primera dotacion" />
-          <DotacionColumn num={2} label="Segunda dotacion" />
-        </div>
-      </div>
-
-      <div className="border-2 border-black flex overflow-hidden">
-        <div className="w-[27%] flex flex-col border-r border-black divide-y divide-black font-bold text-[9px]">
-          <div className="h-7" />
-          <div className="h-8 flex items-center px-2">Receta No.</div>
-          <div className="h-12 flex items-center px-2">Tipo de anteojos</div>
-          <div className="h-8 flex items-center px-2">Folio</div>
-          <div className="h-8 flex items-center px-2">Fecha</div>
-          <div className="h-8 flex items-center px-2">Qna/Mes inclusion</div>
-          <div className="h-14 flex items-start px-2 py-1 text-[8px] leading-tight">Firma de la persona trabajadora, jubilada o pensionada</div>
-        </div>
-        <div className="flex-1 grid grid-cols-2">
-          <DotacionColumn num={3} label="Tercera dotacion" />
-          <DotacionColumn num={4} label="Cuarta dotacion" />
-        </div>
-      </div>
+      <DotacionPairTable a={1} b={2} labelA="Primera dotacion" labelB="Segunda dotacion" />
+      <DotacionPairTable a={3} b={4} labelA="Tercera dotacion" labelB="Cuarta dotacion" />
 
       <div className="mt-2 flex justify-between items-center text-[10px]">
         <span className="font-bold">Clave: 1A14-009-028</span>
