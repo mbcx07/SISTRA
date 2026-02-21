@@ -303,8 +303,8 @@ const App: React.FC = () => {
     return { global, porUnidad, porPeriodo };
   }, [tramites]);
 
-  const handleCreateTramite = async (newTramite: Tramite) => {
-    if (!user) return;
+  const handleCreateTramite = async (newTramite: Tramite, options?: { redirectToTramites?: boolean }) => {
+    if (!user) return null;
     setLoading(true);
     try {
       const newId = await dbService.saveTramite(newTramite);
@@ -314,14 +314,20 @@ const App: React.FC = () => {
         accion: 'CREACION CLOUD',
         descripcion: `Tramite ${newTramite.folio} creado exitosamente.`
       });
+      const savedTramite: Tramite = { ...newTramite, id: newId };
+      setSelectedTramite(savedTramite);
       await loadData();
-      setActiveTab('tramites');
+      if (options?.redirectToTramites !== false) {
+        setActiveTab('tramites');
+      }
+      return savedTramite;
     } catch (e: any) {
       if (isSessionInvalidError(e)) {
         forceLogoutWithMessage(UX_MESSAGES.SESSION_INVALID);
-        return;
+        return null;
       }
       setUiMessage(e?.message || 'No fue posible guardar el tramite.');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -360,22 +366,22 @@ const App: React.FC = () => {
     }
   };
 
-  const handlePrintRequest = async (type: PrintDocumentType) => {
-    if (!user || !selectedTramite) return;
+  const handlePrintForTramite = async (tramite: Tramite, type: PrintDocumentType) => {
+    if (!user || !tramite?.id) return;
 
     setLoading(true);
 
     const fechaAutorizacion = new Date().toISOString();
     let metadata: PrintMetadata = {
-      folio: selectedTramite.folio,
+      folio: tramite.folio,
       documento: type,
       emision: 'ORIGINAL',
-      autorizadoPor: selectedTramite.nombreAutorizador || user.nombre,
+      autorizadoPor: tramite.nombreAutorizador || user.nombre,
       fechaAutorizacion
     };
 
     try {
-      const BitácoraActual = await dbService.getBitacora(selectedTramite.id);
+      const BitácoraActual = await dbService.getBitacora(tramite.id);
       const impresionesPrevias = BitácoraActual.filter(
         (b) => b.categoria === 'IMPRESION' && b.datos?.documento === type
       ).length;
@@ -399,22 +405,23 @@ const App: React.FC = () => {
       };
 
       // abrir vista de impresion aunque falle la Bitácora
+      setSelectedTramite(tramite);
       setPrintConfig({ show: true, type, metadata });
 
       await dbService.addBitacora({
-        tramiteId: selectedTramite.id,
+        tramiteId: tramite.id,
         usuario: user.nombre,
         accion: 'IMPRESION_DOCUMENTO',
         categoria: 'IMPRESION',
-        descripcion: `${metadata.emision} de ${type.toUpperCase()} registrada para folio ${selectedTramite.folio}.`,
+        descripcion: `${metadata.emision} de ${type.toUpperCase()} registrada para folio ${tramite.folio}.`,
         datos: metadata
       });
 
       await dbService.saveTramite({
-        id: selectedTramite.id,
+        id: tramite.id,
         impresiones: {
-          formato: (selectedTramite.impresiones?.formato || 0) + (type === 'formato' ? 1 : 0),
-          tarjeta: (selectedTramite.impresiones?.tarjeta || 0) + (type === 'tarjeta' ? 1 : 0),
+          formato: (tramite.impresiones?.formato || 0) + (type === 'formato' ? 1 : 0),
+          tarjeta: (tramite.impresiones?.tarjeta || 0) + (type === 'tarjeta' ? 1 : 0),
           ultimaFecha: fechaAutorizacion,
           ultimoUsuario: user.nombre,
           ultimoMotivoReimpresion: motivoReimpresion
@@ -426,11 +433,17 @@ const App: React.FC = () => {
         return;
       }
       // fallback: permitir impresion aunque falle registro secundario
+      setSelectedTramite(tramite);
       setPrintConfig({ show: true, type, metadata });
       setUiMessage('Se abrio la vista de impresion, pero fallo el registro en Bitácora.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintRequest = async (type: PrintDocumentType) => {
+    if (!selectedTramite) return;
+    await handlePrintForTramite(selectedTramite, type);
   };
 
   const handleEditCapture = (tramite: Tramite) => {
@@ -691,7 +704,7 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
-            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} /> : <AccessDeniedView />)}
+            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} onSave={handleCreateTramite} onPrint={handlePrintForTramite} /> : <AccessDeniedView />)}
             {/* central view removida por operacion */}
             {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
           </div>
@@ -964,7 +977,7 @@ const DashboardView = ({ presupuestoGlobal, onUpdatePresupuesto, resumenSolicitu
       <div className="bg-white rounded-[32px] border border-slate-100 p-6 lg:p-8 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-end">
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto global editable</label>
+            <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto global</label>
             <input
               type="number"
               min={0}
@@ -1471,9 +1484,11 @@ const TabButton = ({ label, active, onClick }: any) => (
   <button onClick={onClick} className={`whitespace-nowrap px-4 lg:px-10 py-4 lg:py-5 text-[10px] font-black uppercase tracking-widest transition-all border-b-4 ${active ? 'border-imss text-imss bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>{label}</button>
 );
 
-const NuevoTramiteWizard = ({ user, onSave }: any) => {
+const NuevoTramiteWizard = ({ user, onSave, onPrint }: any) => {
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string>('');
+  const [savedTramite, setSavedTramite] = useState<Tramite | null>(null);
+  const [viabilidadConfirmada, setViabilidadConfirmada] = useState(false);
   const [beneficiario, setBeneficiario] = useState<any>({
     tipo: TipoBeneficiario.TRABAJADOR,
     nombre: '',
@@ -1561,57 +1576,65 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
     return '';
   };
 
-  const goToStep = (targetStep: number) => {
+  const goToStep = async (targetStep: number) => {
     const validationError = step === 1 ? validateStep1() : step === 2 ? validateStep2() : '';
     if (targetStep > step && validationError) {
       setStepError(validationError);
       return;
     }
+
+    if (step === 2 && targetStep === 3 && !savedTramite) {
+      const titularNombre = beneficiario.tipo === TipoBeneficiario.HIJO
+        ? beneficiario.titularNombreCompleto
+        : `${beneficiario.nombre} ${beneficiario.apellidoPaterno} ${beneficiario.apellidoMaterno}`.trim();
+
+      const tramite: Tramite = {
+        id: '',
+        folio: generateFolio(user.unidad, Math.floor(Math.random() * 1000)),
+        beneficiario: {
+          ...beneficiario,
+          titularNombreCompleto: titularNombre,
+          constanciaEstudiosVigente: Boolean(beneficiario.constanciaEstudiosVigente),
+          requiereConstanciaEstudios
+        },
+        contratoColectivoAplicable: receta.contratoColectivoAplicable.trim(),
+        lugarSolicitud: receta.lugarSolicitud.trim(),
+        fechaCreacion: new Date().toISOString(),
+        creadorId: user.id,
+        unidad: user.unidad,
+        estatus: EstatusWorkflow.EN_REVISION_DOCUMENTAL,
+        dotacionNumero: receta.dotacionNo,
+        requiereDictamenMedico: receta.dotacionNo >= 3,
+        importeSolicitado: 0,
+        costoSolicitud: 0,
+        folioRecetaImss: receta.folio,
+        fechaExpedicionReceta: new Date(receta.fechaExpedicionReceta).toISOString(),
+        descripcionLente: receta.descripcion,
+        qnaInclusion: receta.qnaInclusion.trim(),
+        clavePresupuestal: receta.clavePresupuestal.trim(),
+        checklist: {} as any,
+        evidencias: [],
+      };
+
+      const saved = await onSave(tramite, { redirectToTramites: false });
+      if (!saved) {
+        return;
+      }
+      setSavedTramite(saved);
+    }
+
     setStepError('');
     setStep(targetStep);
   };
 
-  const handleFinalize = () => {
-    const validationError = step === 1 ? validateStep1() : validateStep2();
-    if (validationError) {
-      setStepError(validationError);
-      setStep(step === 1 ? 1 : 2);
-      return;
-    }
+  const handlePrintHistorial = async () => {
+    if (!savedTramite) return;
+    await onPrint(savedTramite, 'tarjeta');
+  };
 
-    const titularNombre = beneficiario.tipo === TipoBeneficiario.HIJO
-      ? beneficiario.titularNombreCompleto
-      : `${beneficiario.nombre} ${beneficiario.apellidoPaterno} ${beneficiario.apellidoMaterno}`.trim();
-
-    const tramite: Tramite = {
-      id: '',
-      folio: generateFolio(user.unidad, Math.floor(Math.random() * 1000)),
-      beneficiario: {
-        ...beneficiario,
-        titularNombreCompleto: titularNombre,
-        constanciaEstudiosVigente: Boolean(beneficiario.constanciaEstudiosVigente),
-        requiereConstanciaEstudios
-      },
-      contratoColectivoAplicable: receta.contratoColectivoAplicable.trim(),
-      lugarSolicitud: receta.lugarSolicitud.trim(),
-      fechaCreacion: new Date().toISOString(),
-      creadorId: user.id,
-      unidad: user.unidad,
-      estatus: EstatusWorkflow.EN_REVISION_DOCUMENTAL,
-      dotacionNumero: receta.dotacionNo,
-      requiereDictamenMedico: receta.dotacionNo >= 3,
-      importeSolicitado: 0,
-      costoSolicitud: 0,
-      folioRecetaImss: receta.folio,
-      fechaExpedicionReceta: new Date(receta.fechaExpedicionReceta).toISOString(),
-      descripcionLente: receta.descripcion,
-      // medicion de anteojos se captura por proveedor fuera del formato oficial,
-      qnaInclusion: receta.qnaInclusion.trim(),
-      clavePresupuestal: receta.clavePresupuestal.trim(),
-      checklist: {} as any,
-      evidencias: [],
-    };
-    onSave(tramite);
+  const handleConfirmarViabilidadEImprimirFormato = async () => {
+    if (!savedTramite || !viabilidadConfirmada) return;
+    await onPrint(savedTramite, 'formato');
   };
 
   return (
@@ -1801,15 +1824,44 @@ const NuevoTramiteWizard = ({ user, onSave }: any) => {
           </div>
         )}
         {step === 3 && (
-          <div className="text-center py-10 animate-in zoom-in duration-500">
-            <div className="w-28 h-28 bg-imss-light rounded-full flex items-center justify-center mx-auto mb-10 shadow-inner">
-              <ShieldCheck className="text-imss" size={56} />
+          <div className="py-4 lg:py-8 animate-in zoom-in duration-500 space-y-8">
+            <div className="w-20 h-20 lg:w-24 lg:h-24 bg-imss-light rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <ShieldCheck className="text-imss" size={44} />
             </div>
-            <h3 className="text-4xl font-black text-slate-800 uppercase mb-6 tracking-tighter">Validacion de Registro</h3>
-            <p className="text-slate-500 mb-14 max-w-md mx-auto font-medium leading-relaxed uppercase text-xs tracking-widest">La solicitud sera firmada digitalmente y registrada en el sistema institucional.</p>
-            <div className="flex gap-6">
-              <button onClick={() => goToStep(2)} className="px-12 py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
-              <button onClick={handleFinalize} className="flex-1 py-7 bg-imss-dark text-white rounded-[32px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition-all">Sincronizar Solicitud</button>
+            <div className="text-center space-y-4">
+              <h3 className="text-2xl lg:text-4xl font-black text-slate-800 tracking-tight">Su solicitud ha sido registrada. Favor de validar dotaciones por contrato.</h3>
+            </div>
+
+            <button
+              onClick={handlePrintHistorial}
+              className="w-full py-5 lg:py-7 bg-imss text-white rounded-[24px] lg:rounded-[32px] font-black uppercase tracking-[0.15em] lg:tracking-[0.3em] shadow-2xl hover:bg-imss-dark transition-all"
+            >
+              Imprimir historial de dotaciones
+            </button>
+
+            <div className="p-5 lg:p-6 rounded-3xl bg-amber-50 border border-amber-200 text-amber-800 text-xs lg:text-sm font-bold leading-relaxed uppercase tracking-wide">
+              Revisar en historial y contrato colectivo si la solicitud aun es viable.
+            </div>
+
+            <label className="flex items-start gap-3 lg:gap-4 p-4 lg:p-5 rounded-2xl border-2 border-slate-200 bg-white">
+              <input
+                type="checkbox"
+                className="mt-1 w-5 h-5"
+                checked={viabilidadConfirmada}
+                onChange={(e) => setViabilidadConfirmada(e.target.checked)}
+              />
+              <span className="text-sm lg:text-base font-black text-slate-700 uppercase tracking-wide">Confirmo que esta solicitud es viable para tramite siguiente</span>
+            </label>
+
+            <div className="flex flex-col sm:flex-row gap-4 lg:gap-6">
+              <button onClick={() => goToStep(2)} className="px-6 lg:px-12 py-4 lg:py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
+              <button
+                onClick={handleConfirmarViabilidadEImprimirFormato}
+                disabled={!viabilidadConfirmada}
+                className="flex-1 py-5 lg:py-7 bg-imss-dark text-white rounded-[24px] lg:rounded-[32px] font-black uppercase tracking-[0.12em] lg:tracking-[0.22em] shadow-2xl hover:bg-black transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-imss-dark"
+              >
+                Confirmo viabilidad e imprimir formato de tramite
+              </button>
             </div>
           </div>
         )}
