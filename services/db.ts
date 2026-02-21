@@ -80,6 +80,24 @@ const isSameDotacionScope = (a: Partial<Tramite> | undefined, b: Partial<Tramite
   const nombreB = normalizePersonText(`${bb.nombre || ''} ${bb.apellidoPaterno || ''} ${bb.apellidoMaterno || ''}`);
   return Boolean(nombreA) && Boolean(nombreB) && nombreA === nombreB;
 };
+
+const dedupeDotaciones = (items: Tramite[]): Tramite[] => {
+  const byId = new Map<string, Tramite>();
+  for (const t of items || []) {
+    const idKey = String((t as any).id || '').trim();
+    if (idKey) {
+      byId.set(idKey, t);
+    }
+  }
+  const base = byId.size ? Array.from(byId.values()) : items;
+
+  const byFolio = new Map<string, Tramite>();
+  for (const t of base || []) {
+    const key = `${String(t.folio || '').trim().toUpperCase()}|${String(t.contratoColectivoAplicable || '').trim().toUpperCase()}|${String((t as any).unidad || '').trim().toUpperCase()}`;
+    if (!byFolio.has(key)) byFolio.set(key, t);
+  }
+  return Array.from(byFolio.values());
+};
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
   '99032103': 'moises.beltran@imss.gob.mx',
@@ -612,12 +630,14 @@ export const dbService = {
             limit(200)
           );
           const historialSnap = await getDocs(historialQ);
-          const historialMismoContrato = historialSnap.docs
-            .map((d) => ({ id: d.id, ...(d.data() as Tramite) }))
-            .filter((t) => t.id !== tramite.id)
-            .filter((t) => String(t.unidad || '').trim().toUpperCase() === String(user.unidad || '').trim().toUpperCase())
-            .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
-            .filter((t) => isSameDotacionScope(t, tramite));
+          const historialMismoContrato = dedupeDotaciones(
+            historialSnap.docs
+              .map((d) => ({ id: d.id, ...(d.data() as Tramite) }))
+              .filter((t) => t.id !== tramite.id)
+              .filter((t) => String(t.unidad || '').trim().toUpperCase() === String(user.unidad || '').trim().toUpperCase())
+              .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
+              .filter((t) => isSameDotacionScope(t, tramite))
+          );
           if (historialMismoContrato.length >= 2) {
             const folios = historialMismoContrato.map((x) => x.folio).filter(Boolean).join(', ');
             throw new Error(`No se puede guardar. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2). Folios considerados: ${folios || 'N/D'}.`);
@@ -670,11 +690,13 @@ export const dbService = {
           limit(200)
         );
         const historialSnap = await getDocs(historialQ);
-        const historialMismoContrato = historialSnap.docs
-          .map((d) => d.data() as Tramite)
-          .filter((t) => String(t.unidad || '').trim().toUpperCase() === String(user.unidad || '').trim().toUpperCase())
-          .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
-          .filter((t) => isSameDotacionScope(t, tramite));
+        const historialMismoContrato = dedupeDotaciones(
+          historialSnap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as Tramite) }))
+            .filter((t) => String(t.unidad || '').trim().toUpperCase() === String(user.unidad || '').trim().toUpperCase())
+            .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
+            .filter((t) => isSameDotacionScope(t, tramite))
+        );
 
         if (historialMismoContrato.length >= 2) {
           const folios = historialMismoContrato.map((x) => x.folio).filter(Boolean).join(', ');
