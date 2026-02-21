@@ -522,13 +522,13 @@ export const dbService = {
           collection(db, "tramites"),
           where("unidad", "==", user.unidad),
           orderBy("fechaCreacion", "desc"),
-          limit(100)
+          limit(500)
         );
       } else {
         q = query(
           collection(db, "tramites"),
           orderBy("fechaCreacion", "desc"),
-          limit(100)
+          limit(500)
         );
       }
 
@@ -619,7 +619,8 @@ export const dbService = {
             .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
             .filter((t) => isSameDotacionScope(t, tramite));
           if (historialMismoContrato.length >= 2) {
-            throw new Error(`No se puede guardar. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
+            const folios = historialMismoContrato.map((x) => x.folio).filter(Boolean).join(', ');
+            throw new Error(`No se puede guardar. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2). Folios considerados: ${folios || 'N/D'}.`);
           }
         }
 
@@ -676,7 +677,8 @@ export const dbService = {
           .filter((t) => isSameDotacionScope(t, tramite));
 
         if (historialMismoContrato.length >= 2) {
-          throw new Error(`No se puede registrar una nueva solicitud. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
+          const folios = historialMismoContrato.map((x) => x.folio).filter(Boolean).join(', ');
+          throw new Error(`No se puede registrar una nueva solicitud. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2). Folios considerados: ${folios || 'N/D'}.`);
         }
 
         const nextDotacionNumero = Math.min(4, historialMismoContrato.length + 1);
