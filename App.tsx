@@ -1233,11 +1233,24 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                   <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 shadow-inner">
                     <h4 className="text-[11px] font-black text-slate-400 uppercase mb-8 tracking-[0.2em]">Cedula del Beneficiario</h4>
                     <div className="grid grid-cols-1 gap-8">
-                      <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Nombre del Solicitante</p><p className="font-black text-slate-800 text-xl uppercase leading-tight">{[tramite.beneficiario?.nombre, tramite.beneficiario?.apellidoPaterno, tramite.beneficiario?.apellidoMaterno].filter(Boolean).join(' ')}</p></div>
+                      <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Nombre del solicitante</p><p className="font-black text-slate-800 text-xl uppercase leading-tight">{[tramite.beneficiario?.nombre, tramite.beneficiario?.apellidoPaterno, tramite.beneficiario?.apellidoMaterno].filter(Boolean).join(' ')}</p></div>
                       <div className="grid grid-cols-2 gap-6">
-                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">NSS</p><p className="font-black text-imss text-lg tracking-widest">{tramite.beneficiario?.nssTrabajador}</p></div>
-                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Unidad</p><p className="font-black text-slate-800 uppercase text-lg">{tramite.beneficiario?.entidadLaboral}</p></div>
+                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Tipo beneficiario</p><p className="font-black text-slate-800 uppercase text-lg">{tramite.beneficiario?.tipo === TipoBeneficiario.HIJO ? 'HIJA/HIJO' : tramite.beneficiario?.tipo === TipoBeneficiario.TRABAJADOR ? 'PERSONA TRABAJADORA' : 'JUBILADA/PENSIONADA'}</p></div>
+                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Tipo de contratación titular</p><p className="font-black text-slate-800 uppercase text-lg">{tramite.beneficiario?.tipoContratacion || 'SIN CAPTURA'}</p></div>
                       </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">NSS titular</p><p className="font-black text-imss text-lg tracking-widest">{tramite.beneficiario?.nssTrabajador || 'SIN NSS'}</p></div>
+                        <div><p className="text-slate-400 font-black uppercase text-[9px] mb-2 tracking-widest">Unidad</p><p className="font-black text-slate-800 uppercase text-lg">{tramite.beneficiario?.entidadLaboral || 'SIN CAPTURA'}</p></div>
+                      </div>
+                      {tramite.beneficiario?.tipo === TipoBeneficiario.HIJO && (
+                        <div className="grid grid-cols-1 gap-3 p-4 rounded-2xl border border-imss/20 bg-imss-light/20">
+                          <div><p className="text-slate-500 font-black uppercase text-[9px] mb-1 tracking-widest">Titular (padre/madre trabajador/a)</p><p className="font-black text-slate-800 uppercase">{tramite.beneficiario?.titularNombreCompleto || 'SIN CAPTURA'}</p></div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div><p className="text-slate-500 font-black uppercase text-[9px] mb-1 tracking-widest">Matrícula titular</p><p className="font-black text-slate-800 uppercase">{tramite.beneficiario?.matricula || 'SIN CAPTURA'}</p></div>
+                            <div><p className="text-slate-500 font-black uppercase text-[9px] mb-1 tracking-widest">Clave adscripción titular</p><p className="font-black text-slate-800 uppercase">{tramite.beneficiario?.claveAdscripcion || 'SIN CAPTURA'}</p></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
