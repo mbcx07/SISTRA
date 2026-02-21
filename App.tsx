@@ -977,7 +977,7 @@ const DashboardView = ({ presupuestoGlobal, onUpdatePresupuesto, resumenSolicitu
       <div className="bg-white rounded-[32px] border border-slate-100 p-6 lg:p-8 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-end">
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto global</label>
+            <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto</label>
             <input
               type="number"
               min={0}
