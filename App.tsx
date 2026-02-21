@@ -2042,12 +2042,7 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, uiMessage, clearUiMess
             {stepError}
           </div>
         )}
-        {uiMessage && (
-          <div className="mb-8 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold flex items-center justify-between gap-3" role="status">
-            <span>{uiMessage}</span>
-            <button type="button" className="text-[11px] uppercase" onClick={clearUiMessage}>Cerrar</button>
-          </div>
-        )}
+        {/* uiMessage moved to step 3 footer area */}
         {step === 1 && (
           <div className="space-y-10 animate-in slide-in-from-right-8 duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -2297,6 +2292,13 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, uiMessage, clearUiMess
               />
               <span className="text-sm lg:text-base font-black text-slate-700 uppercase tracking-wide">Confirmo que la solicitud es PROCEDENTE para continuar a formato 27</span>
             </label>
+
+            {uiMessage && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold flex items-center justify-between gap-3" role="status">
+                <span>{uiMessage}</span>
+                <button type="button" className="text-[11px] uppercase" onClick={clearUiMessage}>Cerrar</button>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-4 lg:gap-6">
               <button onClick={() => goToStep(2)} className="px-6 lg:px-12 py-4 lg:py-7 text-slate-400 font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Revisar</button>
