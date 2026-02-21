@@ -615,6 +615,7 @@ export const dbService = {
           const historialMismoContrato = historialSnap.docs
             .map((d) => ({ id: d.id, ...(d.data() as Tramite) }))
             .filter((t) => t.id !== tramite.id)
+            .filter((t) => String(t.unidad || '').trim().toUpperCase() === String(user.unidad || '').trim().toUpperCase())
             .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
             .filter((t) => isSameDotacionScope(t, tramite));
           if (historialMismoContrato.length >= 2) {
@@ -670,6 +671,7 @@ export const dbService = {
         const historialSnap = await getDocs(historialQ);
         const historialMismoContrato = historialSnap.docs
           .map((d) => d.data() as Tramite)
+          .filter((t) => String(t.unidad || '').trim().toUpperCase() === String(user.unidad || '').trim().toUpperCase())
           .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
           .filter((t) => isSameDotacionScope(t, tramite));
 
