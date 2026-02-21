@@ -500,10 +500,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUpdateCostoSolicitud = async (tramiteId: string, costoSolicitud: number) => {
+  const handleUpdateCostoSolicitud = async (tramiteId: string, costoSolicitud: number): Promise<boolean> => {
     if (!user || user.role !== Role.ADMIN_SISTEMA) {
       setUiMessage('Solo ADMIN_SISTEMA puede editar el costo de solicitud.');
-      return;
+      return false;
     }
 
     setLoading(true);
@@ -513,8 +513,10 @@ const App: React.FC = () => {
       const refreshed = (await dbService.getTramites()).find((t) => t.id === tramiteId);
       if (refreshed) setSelectedTramite(refreshed);
       setUiMessage('Costo de solicitud actualizado.');
+      return true;
     } catch (e: any) {
       setUiMessage(e?.message || 'No se pudo actualizar el costo.');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -1099,6 +1101,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
   const [activeTab, setActiveTab] = useState<'info' | 'Bitácora' | 'tarjeta'>('info');
   const [Bitácora, setBitácora] = useState<Bitácora[]>([]);
   const [costoSolicitud, setCostoSolicitud] = useState<number>(Number(tramite.costoSolicitud || 0));
+  const [costoSaveFeedback, setCostoSaveFeedback] = useState<string | null>(null);
   // control de importe se Gestióna fuera de la unidad
 
   useEffect(() => {
@@ -1124,6 +1127,12 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
+
+  const handleGuardarCosto = async () => {
+    setCostoSaveFeedback(null);
+    const ok = await onUpdateCostoSolicitud(tramite.id, costoSolicitud);
+    setCostoSaveFeedback(ok ? 'Guardado correctamente.' : 'No se pudo guardar.');
+  };
 
   return (
     <div className="fixed inset-0 bg-imss-dark/80 backdrop-blur-xl z-50 flex items-center justify-center p-2 lg:p-8 animate-in fade-in duration-300" role="dialog" aria-modal="true" aria-label={`Detalle del tramite ${tramite.folio}`}>
@@ -1201,11 +1210,17 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                         />
                         {user.role === Role.ADMIN_SISTEMA && (
                           <button
+                            type="button"
                             className="px-3 py-2 rounded-xl bg-imss text-white text-xs font-black"
-                            onClick={() => onUpdateCostoSolicitud(tramite.id, costoSolicitud)}
+                            onClick={handleGuardarCosto}
                           >Guardar</button>
                         )}
                       </div>
+                      {costoSaveFeedback && (
+                        <p className={`text-[11px] font-bold ${costoSaveFeedback.includes('correctamente') ? 'text-emerald-700' : 'text-red-600'}`}>
+                          {costoSaveFeedback}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
