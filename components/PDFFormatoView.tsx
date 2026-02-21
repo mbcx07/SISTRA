@@ -16,6 +16,8 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
     ? valueOrEmpty(b.titularNombreCompleto)
     : `${valueOrEmpty(b.apellidoPaterno)} ${valueOrEmpty(b.apellidoMaterno)} ${valueOrEmpty(b.nombre)}`.trim();
   const nombreHijo = b.tipo === TipoBeneficiario.HIJO ? `${valueOrEmpty(b.apellidoPaterno)} ${valueOrEmpty(b.apellidoMaterno)} ${valueOrEmpty(b.nombre)}`.trim() : '';
+  const matriculaTitular = valueOrEmpty(b.matricula) || 'NO CAPTURA';
+  const claveAdscripcionTitular = valueOrEmpty(b.claveAdscripcion) || 'NO CAPTURA';
 
   const checkbox = (checked: boolean) => (
     <div className="w-6 h-6 border border-black flex items-center justify-center font-black text-xs leading-none">
@@ -32,6 +34,7 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
           </div>
           <div>
             <h1 className="text-[13px] font-black">Instituto Mexicano del Seguro Social</h1>
+            <p className="text-[10px] font-black mt-1">Solicitud de dotacion de anteojos</p>
           </div>
         </div>
         <div className="text-right">
@@ -78,8 +81,8 @@ export const PDFFormatoView: React.FC<PDFFormatoViewProps> = ({ tramite }) => {
       </div>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4">
-        <div className="flex"><span className="font-bold w-36">Matricula:</span><div className="border-b border-black flex-1 text-center font-bold">{valueOrEmpty(b.matricula)}</div></div>
-        <div className="flex"><span className="font-bold w-36">Clave adscripcion:</span><div className="border-b border-black flex-1 text-center font-bold">{valueOrEmpty(b.claveAdscripcion)}</div></div>
+        <div className="flex"><span className="font-bold w-36">Matricula:</span><div className="border-b border-black flex-1 text-center font-bold">{matriculaTitular}</div></div>
+        <div className="flex"><span className="font-bold w-36">Clave adscripcion:</span><div className="border-b border-black flex-1 text-center font-bold">{claveAdscripcionTitular}</div></div>
         <div className="flex"><span className="font-bold w-36">Folio receta IMSS:</span><div className="border-b border-black flex-1 text-center font-bold">{valueOrEmpty(tramite.folioRecetaImss)}</div></div>
         <div className="flex"><span className="font-bold w-36">Fecha expedicion:</span><div className="border-b border-black flex-1 text-center font-bold">{formatDate(tramite.fechaExpedicionReceta)}</div></div>
          
