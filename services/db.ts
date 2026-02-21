@@ -28,7 +28,7 @@ import {
   reauthenticateWithCredential,
   updatePassword
 } from "firebase/auth";
-import { Tramite, Bitacora, Role, User, EstatusWorkflow } from '../types';
+import { Tramite, Bitacora, Role, User, EstatusWorkflow, TipoBeneficiario } from '../types';
 import { validateWorkflowTransition } from './workflow';
 
 const firebaseConfig = {
@@ -54,6 +54,19 @@ let currentUserProfile: User | null = null;
 let creatorAuthPromise: Promise<ReturnType<typeof getAuth>> | null = null;
 
 const normalizeMatricula = (matricula: string) => matricula.trim().toUpperCase();
+const getDotacionScopeKey = (tramiteLike: Partial<Tramite> | undefined): string => {
+  const b: any = tramiteLike?.beneficiario || {};
+  const tipo = String(b.tipo || '').trim();
+  const nssTitular = String(b.nssTrabajador || '').trim();
+  const nssHijo = String(b.nssHijo || '').trim();
+  const nombreHijo = `${String(b.nombre || '').trim()}|${String(b.apellidoPaterno || '').trim()}|${String(b.apellidoMaterno || '').trim()}`;
+
+  if (tipo === TipoBeneficiario.HIJO) {
+    return `HIJO:${nssTitular}:${nssHijo || nombreHijo}`;
+  }
+
+  return `TITULAR:${nssTitular}`;
+};
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
   '99032103': 'moises.beltran@imss.gob.mx',
@@ -586,12 +599,14 @@ export const dbService = {
             limit(200)
           );
           const historialSnap = await getDocs(historialQ);
+          const scopeKeyActual = getDotacionScopeKey(tramite);
           const historialMismoContrato = historialSnap.docs
             .map((d) => ({ id: d.id, ...(d.data() as Tramite) }))
             .filter((t) => t.id !== tramite.id)
-            .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase());
+            .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
+            .filter((t) => getDotacionScopeKey(t) === scopeKeyActual);
           if (historialMismoContrato.length >= 2) {
-            throw new Error(`No se puede guardar. El titular ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
+            throw new Error(`No se puede guardar. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
           }
         }
 
@@ -641,12 +656,14 @@ export const dbService = {
           limit(200)
         );
         const historialSnap = await getDocs(historialQ);
+        const scopeKeyActual = getDotacionScopeKey(tramite);
         const historialMismoContrato = historialSnap.docs
           .map((d) => d.data() as Tramite)
-          .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase());
+          .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
+          .filter((t) => getDotacionScopeKey(t) === scopeKeyActual);
 
         if (historialMismoContrato.length >= 2) {
-          throw new Error(`No se puede registrar una nueva solicitud. El titular ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
+          throw new Error(`No se puede registrar una nueva solicitud. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2).`);
         }
 
         const docRef = await addDoc(collection(db, "tramites"), {

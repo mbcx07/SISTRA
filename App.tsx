@@ -1658,14 +1658,25 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
     setBeneficiario((prev: any) => ({ ...prev, requiereConstanciaEstudios }));
   }, [requiereConstanciaEstudios]);
 
+  const getDotacionScopeKey = (tramiteLike: Partial<Tramite> | null | undefined) => {
+    const b: any = tramiteLike?.beneficiario || {};
+    const tipo = String(b.tipo || '').trim();
+    const nssTitular = String(b.nssTrabajador || '').trim();
+    const nssHijo = String(b.nssHijo || '').trim();
+    const nombreHijo = `${String(b.nombre || '').trim()}|${String(b.apellidoPaterno || '').trim()}|${String(b.apellidoMaterno || '').trim()}`;
+    return tipo === TipoBeneficiario.HIJO ? `HIJO:${nssTitular}:${nssHijo || nombreHijo}` : `TITULAR:${nssTitular}`;
+  };
+
   const historialMismoContrato = useMemo(() => {
     if (!draftTramite) return [];
     const nssTitular = String(draftTramite.beneficiario?.nssTrabajador || '').trim();
     const contrato = String(draftTramite.contratoColectivoAplicable || '').trim().toUpperCase();
+    const scopeKeyActual = getDotacionScopeKey(draftTramite);
     if (!nssTitular || !contrato) return [];
     return (tramites || []).filter((t: Tramite) =>
       String(t.beneficiario?.nssTrabajador || '').trim() === nssTitular &&
-      String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato
+      String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato &&
+      getDotacionScopeKey(t) === scopeKeyActual
     );
   }, [draftTramite, tramites]);
 
@@ -1814,7 +1825,7 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
   const handleConfirmarViabilidadEImprimirFormato = async () => {
     if (!draftTramite || !viabilidadConfirmada) return;
     if (bloqueadoPorContrato) {
-      setStepError(`IMPROCEDENTE: el titular ya cuenta con ${totalMismoContrato} dotaciones para el contrato colectivo ${draftTramite.contratoColectivoAplicable}. Limite maximo: 2.`);
+      setStepError(`IMPROCEDENTE: la persona solicitante ya cuenta con ${totalMismoContrato} dotaciones para el contrato colectivo ${draftTramite.contratoColectivoAplicable}. Limite maximo: 2.`);
       return;
     }
 
@@ -2038,12 +2049,12 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
 
             <div className={`p-5 lg:p-6 rounded-3xl border text-xs lg:text-sm font-bold leading-relaxed uppercase tracking-wide ${bloqueadoPorContrato ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
               {bloqueadoPorContrato
-                ? `IMPROCEDENTE: el titular ya cuenta con ${totalMismoContrato} dotaciones del mismo contrato colectivo. No se permite guardar tramite.`
-                : 'Revisar historial del titular y confirmar viabilidad del contrato colectivo antes de guardar.'}
+                ? `IMPROCEDENTE: la persona solicitante ya cuenta con ${totalMismoContrato} dotaciones del mismo contrato colectivo. No se permite guardar tramite.`
+                : 'Revisar historial de la persona solicitante y confirmar viabilidad del contrato colectivo antes de guardar.'}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:p-5">
-              <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Historial del titular para el contrato actual</p>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Historial de la persona solicitante para el contrato actual</p>
               {historialMismoContrato.length === 0 ? (
                 <p className="text-sm font-bold text-slate-500">Sin dotaciones previas para este contrato.</p>
               ) : (
