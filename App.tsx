@@ -88,6 +88,18 @@ const App: React.FC = () => {
     const parsed = Number(raw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 800000;
   });
+  const [cctCatalog, setCctCatalog] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('sistra.cctCatalog');
+      const parsed = raw ? JSON.parse(raw) : null;
+      const cleaned = Array.isArray(parsed)
+        ? parsed.map((x: any) => String(x || '').trim()).filter(Boolean)
+        : [];
+      return cleaned.length ? cleaned : ['CCT 2025-2027'];
+    } catch {
+      return ['CCT 2025-2027'];
+    }
+  });
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   // EFECTO DE INICIALIZACION: Unico punto de entrada
@@ -137,6 +149,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('sistra.presupuestoGlobal', String(presupuestoGlobal));
   }, [presupuestoGlobal]);
+
+  useEffect(() => {
+    localStorage.setItem('sistra.cctCatalog', JSON.stringify(cctCatalog));
+  }, [cctCatalog]);
 
   const forceLogoutWithMessage = (message: string) => {
     logoutSession();
@@ -749,9 +765,9 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
-            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} tramites={tramites} onSave={handleCreateTramite} onPrint={handlePrintForTramite} onPreviewPrint={handlePreviewPrint} onImprocedente={handleImprocedenteIntent} /> : <AccessDeniedView />)}
+            {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} tramites={tramites} cctCatalog={cctCatalog} onSave={handleCreateTramite} onPrint={handlePrintForTramite} onPreviewPrint={handlePreviewPrint} onImprocedente={handleImprocedenteIntent} /> : <AccessDeniedView />)}
             {/* central view removida por operacion */}
-            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
+            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} cctCatalog={cctCatalog} onSaveCctCatalog={setCctCatalog} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
           </div>
         </main>
 
@@ -859,8 +875,9 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
   );
 };
 
-const AdminUsersView = ({ currentUser, onChangePassword, onLogout }: { currentUser: User; onChangePassword: () => void; onLogout: () => void }) => {
+const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, onChangePassword, onLogout }: { currentUser: User; cctCatalog: string[]; onSaveCctCatalog: (values: string[]) => void; onChangePassword: () => void; onLogout: () => void }) => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [nuevoCct, setNuevoCct] = useState('');
   const [nombre, setNombre] = useState('');
   const [matricula, setMatricula] = useState('');
   const [unidad, setUnidad] = useState('');
@@ -884,6 +901,39 @@ const AdminUsersView = ({ currentUser, onChangePassword, onLogout }: { currentUs
         <button className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" onClick={onChangePassword}>Cambiar contraseña</button>
         <button className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-black" onClick={onLogout}>Cerrar sesión</button>
       </div>
+
+      <div className="bg-white rounded-3xl p-6 border border-slate-100 space-y-3">
+        <h3 className="font-black uppercase">Configuración de contratos colectivos (CCT)</h3>
+        <p className="text-xs font-semibold text-slate-500">El capturista solo podrá seleccionar contratos dados de alta aquí.</p>
+        <div className="flex gap-2">
+          <input className="flex-1 p-3 border rounded-xl" placeholder="Ej. CCT 2025-2027" value={nuevoCct} onChange={(e) => setNuevoCct(e.target.value)} />
+          <button className="px-4 py-2 rounded-xl bg-imss text-white text-sm font-black" onClick={() => {
+            const next = String(nuevoCct || '').trim().toUpperCase();
+            if (!next) return;
+            const merged = Array.from(new Set([...(cctCatalog || []), next]));
+            onSaveCctCatalog(merged);
+            setNuevoCct('');
+            setFeedback('CCT agregado correctamente.');
+          }}>Agregar CCT</button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(cctCatalog || []).map((cct) => (
+            <div key={cct} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-black flex items-center gap-2">
+              <span>{cct}</span>
+              <button className="text-red-700" onClick={() => {
+                const filtered = (cctCatalog || []).filter((x) => x !== cct);
+                if (!filtered.length) {
+                  setFeedback('Debe existir al menos un CCT vigente.');
+                  return;
+                }
+                onSaveCctCatalog(filtered);
+                setFeedback('CCT eliminado.');
+              }}>Quitar</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div className="bg-white rounded-3xl p-8 border border-slate-100">
         <h3 className="font-black uppercase mb-6">Alta de Usuario</h3>
@@ -1632,7 +1682,7 @@ const TabButton = ({ label, active, onClick }: any) => (
   <button onClick={onClick} className={`whitespace-nowrap px-4 lg:px-10 py-4 lg:py-5 text-[10px] font-black uppercase tracking-widest transition-all border-b-4 ${active ? 'border-imss text-imss bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>{label}</button>
 );
 
-const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, onImprocedente }: any) => {
+const NuevoTramiteWizard = ({ user, tramites, cctCatalog, onSave, onPrint, onPreviewPrint, onImprocedente }: any) => {
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string>('');
   const [draftTramite, setDraftTramite] = useState<Tramite | null>(null);
@@ -1655,7 +1705,7 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
     entidadLaboral: user.unidad,
     ooad: user.ooad
   });
-  const [receta, setReceta] = useState({ folio: '', descripcion: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', clavePresupuestal: '', lugarSolicitud: '', dotacionNo: 1 });
+  const [receta, setReceta] = useState({ folio: '', descripcion: '', contratoColectivoAplicable: (cctCatalog?.[0] || ''), qnaInclusion: '', fechaExpedicionReceta: '', clavePresupuestal: '', lugarSolicitud: '', dotacionNo: 1 });
 
   const edadBeneficiario = useMemo(() => {
     if (!beneficiario.fechaNacimiento) return null;
@@ -1673,6 +1723,13 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
   useEffect(() => {
     setBeneficiario((prev: any) => ({ ...prev, requiereConstanciaEstudios }));
   }, [requiereConstanciaEstudios]);
+
+  useEffect(() => {
+    if (!Array.isArray(cctCatalog) || !cctCatalog.length) return;
+    if (!receta.contratoColectivoAplicable || !cctCatalog.includes(receta.contratoColectivoAplicable)) {
+      setReceta((prev) => ({ ...prev, contratoColectivoAplicable: cctCatalog[0] }));
+    }
+  }, [cctCatalog]);
 
   const getDotacionScopeKey = (tramiteLike: Partial<Tramite> | null | undefined) => {
     const b: any = tramiteLike?.beneficiario || {};
@@ -1829,7 +1886,7 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
       entidadLaboral: user.unidad,
       ooad: user.ooad
     });
-    setReceta({ folio: '', descripcion: '', contratoColectivoAplicable: '', qnaInclusion: '', fechaExpedicionReceta: '', clavePresupuestal: '', lugarSolicitud: '', dotacionNo: 1 });
+    setReceta({ folio: '', descripcion: '', contratoColectivoAplicable: (cctCatalog?.[0] || ''), qnaInclusion: '', fechaExpedicionReceta: '', clavePresupuestal: '', lugarSolicitud: '', dotacionNo: 1 });
   };
 
   const handleImprocedente = async () => {
@@ -2037,7 +2094,10 @@ const NuevoTramiteWizard = ({ user, tramites, onSave, onPrint, onPreviewPrint, o
             </div>
             <div>
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Contrato colectivo aplicable (obligatorio)</label>
-              <input placeholder="CCT 2025-2027" className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.contratoColectivoAplicable} onChange={(e) => { setStepError(''); setReceta({ ...receta, contratoColectivoAplicable: e.target.value }); }} />
+              <select className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-imss transition-all font-black uppercase text-slate-800 shadow-inner" value={receta.contratoColectivoAplicable} onChange={(e) => { setStepError(''); setReceta({ ...receta, contratoColectivoAplicable: e.target.value }); }}>
+                {(cctCatalog || []).map((cct: string) => <option key={cct} value={cct}>{cct}</option>)}
+              </select>
+              {!cctCatalog?.length && <p className="mt-2 text-[11px] font-bold text-red-700">No hay CCT configurados. Solicita al administrador dar de alta al menos uno.</p>}
             </div>
             <div>
               <label className="block text-[11px] font-black text-slate-400 uppercase mb-4 tracking-widest">Qna/Mes inclusion</label>
