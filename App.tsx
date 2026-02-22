@@ -1795,7 +1795,14 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, uiMessage, clearUiMess
     );
   }, [draftTramite, tramites]);
 
-  const totalMismoContrato = historialMismoContrato.length;
+  const totalMismoContrato = (() => {
+    const nums = new Set<number>();
+    for (const h of historialMismoContrato || []) {
+      const n = Number((h as any).dotacionNumero || 0);
+      if (Number.isFinite(n) && n > 0) nums.add(n);
+    }
+    return nums.size || historialMismoContrato.length;
+  })();
   const bloqueadoPorContrato = totalMismoContrato >= 2;
 
   const suggestions = useMemo(() => {

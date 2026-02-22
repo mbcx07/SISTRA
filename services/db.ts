@@ -85,9 +85,7 @@ const dedupeDotaciones = (items: Tramite[]): Tramite[] => {
   const byId = new Map<string, Tramite>();
   for (const t of items || []) {
     const idKey = String((t as any).id || '').trim();
-    if (idKey) {
-      byId.set(idKey, t);
-    }
+    if (idKey) byId.set(idKey, t);
   }
   const base = byId.size ? Array.from(byId.values()) : items;
 
@@ -97,6 +95,15 @@ const dedupeDotaciones = (items: Tramite[]): Tramite[] => {
     if (!byFolio.has(key)) byFolio.set(key, t);
   }
   return Array.from(byFolio.values());
+};
+
+const getUniqueDotacionCount = (items: Tramite[]): number => {
+  const nums = new Set<number>();
+  for (const t of items || []) {
+    const n = Number((t as any).dotacionNumero || 0);
+    if (Number.isFinite(n) && n > 0) nums.add(n);
+  }
+  return nums.size || (items || []).length;
 };
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
@@ -638,9 +645,10 @@ export const dbService = {
               .filter((t) => String(t.contratoColectivoAplicable || '').trim().toUpperCase() === contrato.toUpperCase())
               .filter((t) => isSameDotacionScope(t, tramite))
           );
-          if (historialMismoContrato.length >= 2) {
+          const totalDotacionesUnicas = getUniqueDotacionCount(historialMismoContrato);
+          if (totalDotacionesUnicas >= 2) {
             const folios = historialMismoContrato.map((x) => x.folio).filter(Boolean).join(', ');
-            throw new Error(`No se puede guardar. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2). Folios considerados: ${folios || 'N/D'}.`);
+            throw new Error(`No se puede guardar. La persona solicitante ya cuenta con ${totalDotacionesUnicas} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2). Folios considerados: ${folios || 'N/D'}.`);
           }
         }
 
@@ -698,12 +706,13 @@ export const dbService = {
             .filter((t) => isSameDotacionScope(t, tramite))
         );
 
-        if (historialMismoContrato.length >= 2) {
+        const totalDotacionesUnicas = getUniqueDotacionCount(historialMismoContrato);
+        if (totalDotacionesUnicas >= 2) {
           const folios = historialMismoContrato.map((x) => x.folio).filter(Boolean).join(', ');
-          throw new Error(`No se puede registrar una nueva solicitud. La persona solicitante ya cuenta con ${historialMismoContrato.length} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2). Folios considerados: ${folios || 'N/D'}.`);
+          throw new Error(`No se puede registrar una nueva solicitud. La persona solicitante ya cuenta con ${totalDotacionesUnicas} dotaciones para el contrato colectivo ${contrato} (limite maximo: 2). Folios considerados: ${folios || 'N/D'}.`);
         }
 
-        const nextDotacionNumero = Math.min(4, historialMismoContrato.length + 1);
+        const nextDotacionNumero = Math.min(4, totalDotacionesUnicas + 1);
         const docRef = await addDoc(collection(db, "tramites"), {
           ...tramite,
           contratoColectivoAplicable: contrato,
