@@ -74,11 +74,19 @@ const isSameDotacionScope = (a: Partial<Tramite> | undefined, b: Partial<Tramite
 
   const nssHijoA = String(ba.nssHijo || '').replace(/\D/g, '').trim();
   const nssHijoB = String(bb.nssHijo || '').replace(/\D/g, '').trim();
-  if (nssHijoA && nssHijoB) return nssHijoA === nssHijoB;
+  const nssHijoAEsDistintivo = nssHijoA && nssHijoA !== titularA;
+  const nssHijoBEsDistintivo = nssHijoB && nssHijoB !== titularB;
+  if (nssHijoAEsDistintivo && nssHijoBEsDistintivo) return nssHijoA === nssHijoB;
 
   const nombreA = normalizePersonText(`${ba.nombre || ''} ${ba.apellidoPaterno || ''} ${ba.apellidoMaterno || ''}`);
   const nombreB = normalizePersonText(`${bb.nombre || ''} ${bb.apellidoPaterno || ''} ${bb.apellidoMaterno || ''}`);
-  return Boolean(nombreA) && Boolean(nombreB) && nombreA === nombreB;
+  const fechaA = String(ba.fechaNacimiento || '').slice(0, 10);
+  const fechaB = String(bb.fechaNacimiento || '').slice(0, 10);
+  if (Boolean(nombreA) && Boolean(nombreB) && nombreA === nombreB) {
+    if (fechaA && fechaB) return fechaA === fechaB;
+    return true;
+  }
+  return false;
 };
 
 const dedupeDotaciones = (items: Tramite[]): Tramite[] => {

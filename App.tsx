@@ -1776,11 +1776,19 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, uiMessage, clearUiMess
 
     const nssHijoA = String(ba.nssHijo || '').replace(/\D/g, '').trim();
     const nssHijoB = String(bb.nssHijo || '').replace(/\D/g, '').trim();
-    if (nssHijoA && nssHijoB) return nssHijoA === nssHijoB;
+    const nssHijoAEsDistintivo = nssHijoA && nssHijoA !== titularA;
+    const nssHijoBEsDistintivo = nssHijoB && nssHijoB !== titularB;
+    if (nssHijoAEsDistintivo && nssHijoBEsDistintivo) return nssHijoA === nssHijoB;
 
     const nombreA = normalizePersonText(`${ba.nombre || ''} ${ba.apellidoPaterno || ''} ${ba.apellidoMaterno || ''}`);
     const nombreB = normalizePersonText(`${bb.nombre || ''} ${bb.apellidoPaterno || ''} ${bb.apellidoMaterno || ''}`);
-    return Boolean(nombreA) && Boolean(nombreB) && nombreA === nombreB;
+    const fechaA = String(ba.fechaNacimiento || '').slice(0, 10);
+    const fechaB = String(bb.fechaNacimiento || '').slice(0, 10);
+    if (Boolean(nombreA) && Boolean(nombreB) && nombreA === nombreB) {
+      if (fechaA && fechaB) return fechaA === fechaB;
+      return true;
+    }
+    return false;
   };
 
   const historialMismoContrato = useMemo(() => {
@@ -1865,6 +1873,9 @@ const NuevoTramiteWizard = ({ user, tramites, cctCatalog, uiMessage, clearUiMess
       if (!beneficiario.tipoContratacion?.trim()) return 'Captura el tipo de contratacion de la persona trabajadora titular.';
       if (!beneficiario.nssHijo?.trim() || !/^\d{10,11}$/.test(beneficiario.nssHijo.trim())) return 'El NSS de hija/hijo debe tener 10 u 11 digitos.';
       if (!beneficiario.fechaNacimiento) return 'Captura fecha de nacimiento de hija/hijo.';
+      if (String(beneficiario.nssHijo || '').replace(/\D/g, '') === String(beneficiario.nssTrabajador || '').replace(/\D/g, '')) {
+        if (!beneficiario.nombre?.trim() || !beneficiario.apellidoPaterno?.trim() || !beneficiario.apellidoMaterno?.trim()) return 'Cuando NSS hija/hijo coincide con NSS titular, completa nombre y apellidos para diferenciar beneficiario.';
+      }
       if (requiereConstanciaEstudios) {
         if (!beneficiario.constanciaEstudiosVigente) return 'Marca constancia de estudios vigente para hija/hijo mayor de 18 anos.';
         if (!beneficiario.fechaConstanciaEstudios) return 'Captura fecha de emision de constancia de estudios.';
@@ -2356,6 +2367,7 @@ const CentralView = ({ tramites }: any) => (
 );
 
 export default App;
+
 
 
 
