@@ -691,6 +691,7 @@ const App: React.FC = () => {
               </div>
               <span className="text-2xl font-black tracking-tighter">SISTRA</span>
             </div>
+            <p className="text-[10px] text-white/70 font-bold">Sistema para el trámite de anteojos</p>
             <div className="flex items-center gap-2 mt-4">
                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                <p className="text-[10px] text-emerald-400 uppercase font-black tracking-widest">En Linea (v2.7)</p>
@@ -880,7 +881,8 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
         onSubmit={handleSubmit}
         className="w-full max-w-md institutional-card p-6 lg:p-10"
       >
-        <h1 className="text-2xl font-black text-imss-dark uppercase mb-8">Acceso SISTRA</h1>
+        <h1 className="text-2xl font-black text-imss-dark uppercase mb-2">Acceso SISTRA</h1>
+        <p className="text-xs text-slate-500 font-bold mb-6">Sistema para el trámite de anteojos</p>
         <label className="field-label">Matricula</label>
         <input value={matricula} onChange={(e) => setMatricula(e.target.value)} className="field-input mb-5" placeholder="Ej. 99032103" inputMode="numeric" pattern="[0-9]*" required />
         <label className="field-label">contraseña</label>
