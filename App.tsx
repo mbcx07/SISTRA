@@ -633,9 +633,44 @@ const App: React.FC = () => {
              <PDFTarjetaControlView 
                beneficiario={selectedTramite.beneficiario}
                dotaciones={(() => {
-                 const base = tramites.filter(t => t.beneficiario?.nssTrabajador === selectedTramite.beneficiario?.nssTrabajador);
-                 if (selectedTramite.id) return base;
-                 return [...base, selectedTramite];
+                 const normalize = (v: any) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+                 const s: any = selectedTramite?.beneficiario || {};
+                 const sTipo = String(s.tipo || '').trim();
+                 const sTitular = String(s.nssTrabajador || '').replace(/\D/g, '').trim();
+                 const sNssHijo = String(s.nssHijo || '').replace(/\D/g, '').trim();
+                 const sNombre = normalize(`${s.nombre || ''} ${s.apellidoPaterno || ''} ${s.apellidoMaterno || ''}`);
+                 const sFecha = String(s.fechaNacimiento || '').slice(0, 10);
+
+                 const sameScope = (t: any) => {
+                   const b: any = t?.beneficiario || {};
+                   const tTipo = String(b.tipo || '').trim();
+                   const tTitular = String(b.nssTrabajador || '').replace(/\D/g, '').trim();
+                   if (!sTitular || tTitular !== sTitular) return false;
+
+                   if (sTipo !== TipoBeneficiario.HIJO && tTipo !== TipoBeneficiario.HIJO) return true;
+
+                   const tNssHijo = String(b.nssHijo || '').replace(/\D/g, '').trim();
+                   const sNssValido = sNssHijo && sNssHijo !== sTitular;
+                   const tNssValido = tNssHijo && tNssHijo !== tTitular;
+                   if (sNssValido && tNssValido) return sNssHijo === tNssHijo;
+
+                   const tNombre = normalize(`${b.nombre || ''} ${b.apellidoPaterno || ''} ${b.apellidoMaterno || ''}`);
+                   const tFecha = String(b.fechaNacimiento || '').slice(0, 10);
+                   if (!sNombre || !tNombre || sNombre !== tNombre) return false;
+                   if (sFecha && tFecha) return sFecha === tFecha;
+                   return true;
+                 };
+
+                 const base = tramites.filter((t) => sameScope(t));
+                 const list = selectedTramite.id ? base : [...base, selectedTramite];
+                 const seen = new Set<string>();
+                 return list.filter((x: any) => {
+                   const key = String(x.id || x.folio || '').trim();
+                   if (!key) return true;
+                   if (seen.has(key)) return false;
+                   seen.add(key);
+                   return true;
+                 });
                })()}
              />
            )}
