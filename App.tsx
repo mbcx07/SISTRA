@@ -182,16 +182,22 @@ const App: React.FC = () => {
       setPresupuestoGlobal(value);
     });
 
+    const applyGlobalTotals = (totals: any) => {
+      setDashboardTotalsGlobal(totals);
+      const rows = Array.isArray(totals?.resumenPorUnidad) ? totals.resumenPorUnidad : null;
+      if (rows && rows.length > 0) {
+        setResumenSolicitudesGlobal(rows);
+      }
+    };
+
     const loadDashboardTotals = async () => {
       const totals = await dbService.getDashboardGlobalTotals();
-      setDashboardTotalsGlobal(totals);
-      setResumenSolicitudesGlobal(Array.isArray(totals?.resumenPorUnidad) ? totals.resumenPorUnidad : []);
+      applyGlobalTotals(totals);
     };
     void loadDashboardTotals();
 
     const unsubscribeDashboardTotals = dbService.watchDashboardGlobalTotals((totals) => {
-      setDashboardTotalsGlobal(totals);
-      setResumenSolicitudesGlobal(Array.isArray(totals?.resumenPorUnidad) ? totals.resumenPorUnidad : []);
+      applyGlobalTotals(totals);
     });
 
     return () => {
