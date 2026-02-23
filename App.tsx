@@ -195,10 +195,9 @@ const App: React.FC = () => {
     };
 
     const unsubscribeResumen = dbService.watchResumenSolicitudesGlobal((rows) => {
-      if (Array.isArray(rows) && rows.length > 0) {
-        setResumenSolicitudesGlobal(rows);
-        localStorage.setItem('sistra.resumenGlobalCache', JSON.stringify(rows));
-      }
+      const safeRows = Array.isArray(rows) ? rows : [];
+      setResumenSolicitudesGlobal(safeRows);
+      localStorage.setItem('sistra.resumenGlobalCache', JSON.stringify(safeRows));
     });
 
     const loadDashboardTotals = async () => {
