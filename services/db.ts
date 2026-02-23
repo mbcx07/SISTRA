@@ -13,7 +13,8 @@ import {
   orderBy,
   limit,
   deleteDoc,
-  onSnapshot
+  onSnapshot,
+  increment
 } from "firebase/firestore";
 import {
   getAuth,
@@ -577,6 +578,33 @@ export const dbService = {
     return () => unsub();
   },
 
+  async getDashboardGlobalTotals(): Promise<{ totalSolicitudes: number; totalImporte: number }> {
+    try {
+      const cfgDoc = await getDoc(doc(db, 'configuracion', 'global'));
+      if (!cfgDoc.exists()) return { totalSolicitudes: 0, totalImporte: 0 };
+      const data: any = cfgDoc.data() || {};
+      return {
+        totalSolicitudes: Number(data.totalSolicitudesGlobal || 0),
+        totalImporte: Number(data.totalImporteGlobal || 0)
+      };
+    } catch {
+      return { totalSolicitudes: 0, totalImporte: 0 };
+    }
+  },
+
+  watchDashboardGlobalTotals(onValue: (totals: { totalSolicitudes: number; totalImporte: number }) => void): () => void {
+    const ref = doc(db, 'configuracion', 'global');
+    const unsub = onSnapshot(ref, (snap) => {
+      if (!snap.exists()) return;
+      const data: any = snap.data() || {};
+      onValue({
+        totalSolicitudes: Number(data.totalSolicitudesGlobal || 0),
+        totalImporte: Number(data.totalImporteGlobal || 0),
+      });
+    });
+    return () => unsub();
+  },
+
   async getUsers(): Promise<User[]> {
     const q = query(collection(db, 'usuarios'), orderBy('nombre', 'asc'));
     const querySnapshot = await getDocs(q);
@@ -713,6 +741,15 @@ export const dbService = {
         const { id, ...data } = tramite;
         await updateDoc(docRef, data);
 
+        const prevCosto = Number((previo as any)?.costoSolicitud || 0);
+        const nextCosto = Number((({ ...previo, ...data } as any)?.costoSolicitud) || 0);
+        const deltaCosto = nextCosto - prevCosto;
+        if (deltaCosto !== 0) {
+          await setDoc(doc(db, 'configuracion', 'global'), {
+            totalImporteGlobal: increment(deltaCosto)
+          }, { merge: true });
+        }
+
         if (tramite.estatus && tramite.estatus !== previo.estatus) {
           await addWorkflowBitacora({
             tramiteId: tramite.id,
@@ -771,14 +808,22 @@ export const dbService = {
         }
 
         const nextDotacionNumero = Math.min(4, totalDotacionesUnicas + 1);
+        const costoSolicitud = Number(tramite.costoSolicitud || 0);
         const docRef = await addDoc(collection(db, "tramites"), {
           ...tramite,
+          costoSolicitud,
           contratoColectivoAplicable: contrato,
           dotacionNumero: nextDotacionNumero,
           requiereDictamenMedico: nextDotacionNumero >= 3,
           creadorId: user.id,
           unidad: user.unidad
         });
+
+        await setDoc(doc(db, 'configuracion', 'global'), {
+          totalSolicitudesGlobal: increment(1),
+          totalImporteGlobal: increment(costoSolicitud)
+        }, { merge: true });
+
         return docRef.id;
       }
     } catch (error: any) {
@@ -801,6 +846,11 @@ export const dbService = {
     }
 
     await deleteDoc(docRef);
+
+    await setDoc(doc(db, 'configuracion', 'global'), {
+      totalSolicitudesGlobal: increment(-1),
+      totalImporteGlobal: increment(-Number((previo as any)?.costoSolicitud || 0))
+    }, { merge: true });
   },
 
   async getBitacora(tramiteId: string): Promise<Bitacora[]> {
