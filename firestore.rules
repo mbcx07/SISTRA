@@ -106,7 +106,8 @@ service cloud.firestore {
 
     // Trámites
     match /tramites/{tramiteId} {
-      allow read: if activeUser() && canReadTramiteData(resource.data);
+      // Todos los perfiles activos pueden consultar tablero institucional global.
+      allow read: if activeUser();
 
       // Crear: admin/capturista/validador; consulta no
       allow create: if activeUser() && (isAdmin() || isCapturista() || isValidador())

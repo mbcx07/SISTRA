@@ -199,6 +199,13 @@ const App: React.FC = () => {
       }
     };
 
+    const unsubscribeResumen = dbService.watchResumenSolicitudesGlobal((rows) => {
+      if (Array.isArray(rows) && rows.length > 0) {
+        setResumenSolicitudesGlobal(rows);
+        localStorage.setItem('sistra.resumenGlobalCache', JSON.stringify(rows));
+      }
+    });
+
     const loadDashboardTotals = async () => {
       const totals = await dbService.getDashboardGlobalTotals();
       applyGlobalTotals(totals);
@@ -211,6 +218,7 @@ const App: React.FC = () => {
 
     return () => {
       unsubscribePresupuesto();
+      unsubscribeResumen();
       unsubscribeDashboardTotals();
     };
   }, [user]);
@@ -1412,7 +1420,7 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                </div>
                <p className="text-imss-gold font-black text-[10px] uppercase tracking-[0.3em] mt-3">SISTRA ID: {tramite.id}</p>
              </div>
-             <div className="flex items-center gap-4">
+             <div className="flex items-center gap-3 flex-wrap justify-end">
                <button onClick={() => onPrint('formato')} className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest border border-white/5">
                  <Printer size={20} className="text-imss-gold" /> Imprimir/Reimprimir 027
                </button>
@@ -1425,8 +1433,8 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                <button onClick={() => onDeleteTramite(tramite)} className="px-6 py-4 bg-red-500/20 hover:bg-red-500/35 rounded-2xl transition-all text-xs font-black uppercase tracking-widest border border-red-200/30 text-red-100">
                  Eliminar solicitud
                </button>
-               <button onClick={onClose} className="p-4 bg-white/5 hover:bg-white/20 rounded-2xl text-white/40 hover:text-white transition-all">
-                 <XCircle size={32} />
+               <button onClick={onClose} className="p-3 shrink-0 bg-white/10 hover:bg-white/25 rounded-2xl text-white border border-white/20 hover:border-white/40 transition-all" aria-label="Cerrar ventana de tramite">
+                 <XCircle size={26} />
                </button>
              </div>
           </div>
