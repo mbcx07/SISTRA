@@ -117,9 +117,24 @@ const getUniqueDotacionCount = (items: Tramite[]): number => {
   return nums.size || (items || []).length;
 };
 
+const parseMoneyLike = (value: any): number => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const raw = String(value ?? '').trim();
+  if (!raw) return 0;
+  const cleaned = raw.replace(/[^\d.,-]/g, '');
+  // soporta "1,234.56" y "1.234,56"
+  const normalized = cleaned.includes(',') && cleaned.includes('.')
+    ? (cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')
+      ? cleaned.replace(/\./g, '').replace(',', '.')
+      : cleaned.replace(/,/g, ''))
+    : cleaned.replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const resolveTramiteImporte = (t: any): number => {
-  const v = Number(t?.importeAutorizado ?? t?.importeSolicitado ?? t?.costoSolicitud ?? 0);
-  return Number.isFinite(v) ? v : 0;
+  const v = t?.importeAutorizado ?? t?.importeSolicitado ?? t?.costoSolicitud ?? 0;
+  return parseMoneyLike(v);
 };
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
