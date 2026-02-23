@@ -69,6 +69,7 @@ const formatStatusLabel = (estatus: string) => {
 };
 
 const formatCurrency = (value: number) => `$${Number(value || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const isAdminRole = (role: any) => role === Role.ADMIN_SISTEMA || String(role || '').toLowerCase() === 'admin';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tramites' | 'nuevo' | 'central' | 'adminUsers'>('dashboard');
@@ -156,7 +157,7 @@ const App: React.FC = () => {
     if (!user) return;
 
     const runAdminRebuild = async () => {
-      if (user.role !== Role.ADMIN_SISTEMA) return;
+      if (!isAdminRole(user.role)) return;
       try {
         await dbService.rebuildDashboardGlobalTotals(user);
       } catch {
@@ -615,7 +616,7 @@ const App: React.FC = () => {
   };
 
   const handleUpdateCostoSolicitud = async (tramiteId: string, costoSolicitud: number): Promise<boolean> => {
-    if (!user || user.role !== Role.ADMIN_SISTEMA) {
+    if (!user || !isAdminRole(user.role)) {
       setUiMessage('Solo ADMIN_SISTEMA puede editar el costo de solicitud.');
       return false;
     }
@@ -1457,10 +1458,10 @@ const TramiteDetailModal = ({ tramite, user, onClose, onUpdateEstatus, onEditCap
                           step="0.01"
                           value={costoSolicitud}
                           onChange={(e) => setCostoSolicitud(Number(e.target.value || 0))}
-                          disabled={user.role !== Role.ADMIN_SISTEMA}
+                          disabled={!isAdminRole(user.role)}
                           className="w-full p-3 rounded-xl border border-slate-200 font-black text-slate-800 disabled:bg-slate-100"
                         />
-                        {user.role === Role.ADMIN_SISTEMA && (
+                        {isAdminRole(user.role) && (
                           <button
                             type="button"
                             className="px-3 py-2 rounded-xl bg-imss text-white text-xs font-black"

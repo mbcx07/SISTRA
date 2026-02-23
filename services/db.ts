@@ -286,8 +286,10 @@ export const validatePasswordStrength = (password: string): string[] => {
   return issues;
 };
 
+const isAdminRole = (role: any): boolean => role === Role.ADMIN_SISTEMA || String(role || '').toLowerCase() === 'admin';
+
 const canUpdateStatus = (role: Role, estatus: EstatusWorkflow): boolean => {
-  if (role === Role.ADMIN_SISTEMA) return true;
+  if (isAdminRole(role)) return true;
 
   if (role === Role.CONSULTA_CENTRAL) return false;
 
@@ -321,7 +323,7 @@ const addWorkflowBitacora = async (payload: {
 };
 
 const canAccessTramiteByScope = (user: User, tramite: Tramite): boolean => {
-  if (user.role === Role.ADMIN_SISTEMA) return true;
+  if (isAdminRole(user.role)) return true;
   if (user.role === Role.CAPTURISTA_UNIDAD) {
     return (tramite.unidad || '').trim().toUpperCase() === (user.unidad || '').trim().toUpperCase();
   }
@@ -443,7 +445,7 @@ export const adminCreateCapturista = async (
   adminUser: User,
   payload: { nombre: string; matricula: string; unidad: string; ooad: string; password: string; role?: Role }
 ): Promise<string> => {
-  if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede crear usuarios.');
+  if (!isAdminRole(adminUser.role)) throw new AuthError('UNAUTHORIZED', 'Solo admin puede crear usuarios.');
 
   const weakPasswordIssues = validatePasswordStrength(payload.password);
   if (weakPasswordIssues.length > 0) {
@@ -480,7 +482,7 @@ export const adminResetPassword = async (
   userId: string,
   newPassword: string
 ): Promise<void> => {
-  if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede resetear contrasenas.');
+  if (!isAdminRole(adminUser.role)) throw new AuthError('UNAUTHORIZED', 'Solo admin puede resetear contrasenas.');
 
   const issues = validatePasswordStrength(newPassword);
   if (issues.length > 0) {
@@ -548,7 +550,7 @@ export const dbService = {
   },
 
   async setPresupuestoGlobal(adminUser: User, value: number): Promise<void> {
-    if (adminUser.role !== Role.ADMIN_SISTEMA) {
+    if (!isAdminRole(adminUser.role)) {
       throw new AuthError('UNAUTHORIZED', 'Solo admin puede actualizar el presupuesto global.');
     }
     await setDoc(doc(db, 'configuracion', 'global'), { presupuestoGlobal: Math.max(0, Number(value || 0)) }, { merge: true });
@@ -615,7 +617,7 @@ export const dbService = {
   },
 
   async rebuildDashboardGlobalTotals(adminUser: User): Promise<void> {
-    if (adminUser.role !== Role.ADMIN_SISTEMA) {
+    if (!isAdminRole(adminUser.role)) {
       throw new AuthError('UNAUTHORIZED', 'Solo admin puede recalcular los totales globales.');
     }
     const qAll = query(collection(db, 'tramites'), limit(2000));
@@ -649,12 +651,12 @@ export const dbService = {
   },
 
   async adminUpdateUserRole(adminUser: User, userId: string, role: Role): Promise<void> {
-    if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede actualizar roles.');
+    if (!isAdminRole(adminUser.role)) throw new AuthError('UNAUTHORIZED', 'Solo admin puede actualizar roles.');
     await updateDoc(doc(db, 'usuarios', userId), { role });
   },
 
   async adminDeleteUser(adminUser: User, userId: string): Promise<void> {
-    if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede eliminar usuarios.');
+    if (!isAdminRole(adminUser.role)) throw new AuthError('UNAUTHORIZED', 'Solo admin puede eliminar usuarios.');
     if (adminUser.id === userId) throw new Error('No puedes eliminar tu propio usuario administrador.');
     await deleteDoc(doc(db, 'usuarios', userId));
   },
