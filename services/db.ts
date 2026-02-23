@@ -556,6 +556,27 @@ export const dbService = {
     return () => unsub();
   },
 
+  watchResumenSolicitudesGlobal(onValue: (rows: Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>) => void): () => void {
+    const q = query(collection(db, 'tramites'), limit(1000));
+    const unsub = onSnapshot(q, (snap) => {
+      const map = (snap.docs || []).reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, d) => {
+        const t: any = d.data() || {};
+        const unidad = String(t.unidad || t?.beneficiario?.entidadLaboral || 'SIN_UNIDAD');
+        if (!acc[unidad]) acc[unidad] = { totalSolicitudes: 0, totalCosto: 0 };
+        acc[unidad].totalSolicitudes += 1;
+        acc[unidad].totalCosto += Number(t.costoSolicitud || 0);
+        return acc;
+      }, {});
+
+      const rows = Object.entries(map)
+        .map(([unidad, val]) => ({ unidad, totalSolicitudes: val.totalSolicitudes, totalCosto: val.totalCosto }))
+        .sort((a, b) => a.unidad.localeCompare(b.unidad));
+
+      onValue(rows);
+    });
+    return () => unsub();
+  },
+
   async getUsers(): Promise<User[]> {
     const q = query(collection(db, 'usuarios'), orderBy('nombre', 'asc'));
     const querySnapshot = await getDocs(q);

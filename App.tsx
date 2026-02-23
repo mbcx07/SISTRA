@@ -83,6 +83,7 @@ const App: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [captureEditTarget, setCaptureEditTarget] = useState<Tramite | null>(null);
+  const [resumenSolicitudesGlobal, setResumenSolicitudesGlobal] = useState<Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>>([]);
   const [presupuestoGlobal, setPresupuestoGlobal] = useState<number>(() => {
     const raw = localStorage.getItem('sistra.presupuestoGlobal');
     const parsed = Number(raw);
@@ -165,11 +166,18 @@ const App: React.FC = () => {
     };
     void loadPresupuestoGlobal();
 
-    const unsubscribe = dbService.watchPresupuestoGlobal((value) => {
+    const unsubscribePresupuesto = dbService.watchPresupuestoGlobal((value) => {
       setPresupuestoGlobal(value);
     });
 
-    return () => unsubscribe();
+    const unsubscribeResumen = dbService.watchResumenSolicitudesGlobal((rows) => {
+      setResumenSolicitudesGlobal(rows);
+    });
+
+    return () => {
+      unsubscribePresupuesto();
+      unsubscribeResumen();
+    };
   }, [user]);
 
   useEffect(() => {
@@ -836,7 +844,7 @@ const App: React.FC = () => {
                 chartData={chartData}
                 gastoMetrics={gastoMetrics}
                 presupuestoGlobal={presupuestoGlobal}
-                resumenSolicitudesPorUnidad={resumenSolicitudesPorUnidad}
+                resumenSolicitudesPorUnidad={resumenSolicitudesGlobal.length ? resumenSolicitudesGlobal : resumenSolicitudesPorUnidad}
               />
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
