@@ -583,21 +583,22 @@ export const dbService = {
     return () => unsub();
   },
 
-  async getDashboardGlobalTotals(): Promise<{ totalSolicitudes: number; totalImporte: number }> {
+  async getDashboardGlobalTotals(): Promise<{ totalSolicitudes: number; totalImporte: number; resumenPorUnidad: Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }> }> {
     try {
       const cfgDoc = await getDoc(doc(db, 'configuracion', 'global'));
-      if (!cfgDoc.exists()) return { totalSolicitudes: 0, totalImporte: 0 };
+      if (!cfgDoc.exists()) return { totalSolicitudes: 0, totalImporte: 0, resumenPorUnidad: [] };
       const data: any = cfgDoc.data() || {};
       return {
         totalSolicitudes: Number(data.totalSolicitudesGlobal || 0),
-        totalImporte: Number(data.totalImporteGlobal || 0)
+        totalImporte: Number(data.totalImporteGlobal || 0),
+        resumenPorUnidad: Array.isArray(data.resumenPorUnidadGlobal) ? data.resumenPorUnidadGlobal : []
       };
     } catch {
-      return { totalSolicitudes: 0, totalImporte: 0 };
+      return { totalSolicitudes: 0, totalImporte: 0, resumenPorUnidad: [] };
     }
   },
 
-  watchDashboardGlobalTotals(onValue: (totals: { totalSolicitudes: number; totalImporte: number }) => void): () => void {
+  watchDashboardGlobalTotals(onValue: (totals: { totalSolicitudes: number; totalImporte: number; resumenPorUnidad: Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }> }) => void): () => void {
     const ref = doc(db, 'configuracion', 'global');
     const unsub = onSnapshot(ref, (snap) => {
       if (!snap.exists()) return;
@@ -605,6 +606,7 @@ export const dbService = {
       onValue({
         totalSolicitudes: Number(data.totalSolicitudesGlobal || 0),
         totalImporte: Number(data.totalImporteGlobal || 0),
+        resumenPorUnidad: Array.isArray(data.resumenPorUnidadGlobal) ? data.resumenPorUnidadGlobal : [],
       });
     });
     return () => unsub();
@@ -618,9 +620,23 @@ export const dbService = {
     const snap = await getDocs(qAll);
     const totalSolicitudes = snap.size;
     const totalImporte = snap.docs.reduce((acc, d) => acc + resolveTramiteImporte(d.data() as any), 0);
+
+    const map = (snap.docs || []).reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, d) => {
+      const t: any = d.data() || {};
+      const unidad = String(t.unidad || t?.beneficiario?.entidadLaboral || 'SIN_UNIDAD');
+      if (!acc[unidad]) acc[unidad] = { totalSolicitudes: 0, totalCosto: 0 };
+      acc[unidad].totalSolicitudes += 1;
+      acc[unidad].totalCosto += resolveTramiteImporte(t);
+      return acc;
+    }, {});
+    const resumenPorUnidadGlobal = Object.entries(map)
+      .map(([unidad, val]) => ({ unidad, totalSolicitudes: val.totalSolicitudes, totalCosto: val.totalCosto }))
+      .sort((a, b) => a.unidad.localeCompare(b.unidad));
+
     await setDoc(doc(db, 'configuracion', 'global'), {
       totalSolicitudesGlobal: totalSolicitudes,
       totalImporteGlobal: totalImporte,
+      resumenPorUnidadGlobal,
     }, { merge: true });
   },
 

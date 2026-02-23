@@ -84,7 +84,7 @@ const App: React.FC = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [captureEditTarget, setCaptureEditTarget] = useState<Tramite | null>(null);
   const [resumenSolicitudesGlobal, setResumenSolicitudesGlobal] = useState<Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>>([]);
-  const [dashboardTotalsGlobal, setDashboardTotalsGlobal] = useState<{ totalSolicitudes: number; totalImporte: number }>({ totalSolicitudes: 0, totalImporte: 0 });
+  const [dashboardTotalsGlobal, setDashboardTotalsGlobal] = useState<{ totalSolicitudes: number; totalImporte: number; resumenPorUnidad: Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }> }>({ totalSolicitudes: 0, totalImporte: 0, resumenPorUnidad: [] });
   const [presupuestoGlobal, setPresupuestoGlobal] = useState<number>(() => {
     const raw = localStorage.getItem('sistra.presupuestoGlobal');
     const parsed = Number(raw);
@@ -866,7 +866,7 @@ const App: React.FC = () => {
                 chartData={chartData}
                 gastoMetrics={gastoMetrics}
                 presupuestoGlobal={presupuestoGlobal}
-                resumenSolicitudesPorUnidad={resumenSolicitudesGlobal.length ? resumenSolicitudesGlobal : resumenSolicitudesPorUnidad}
+                resumenSolicitudesPorUnidad={dashboardTotalsGlobal.resumenPorUnidad?.length ? dashboardTotalsGlobal.resumenPorUnidad : (resumenSolicitudesGlobal.length ? resumenSolicitudesGlobal : resumenSolicitudesPorUnidad)}
                 dashboardTotalsGlobal={dashboardTotalsGlobal}
               />
             )}
@@ -1203,8 +1203,8 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
 );
 
 const DashboardView = ({ presupuestoGlobal, resumenSolicitudesPorUnidad, dashboardTotalsGlobal }: any) => {
-  const totalSolicitudes = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalSolicitudes || 0), 0);
-  const totalImporte = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalCosto || 0), 0);
+  const totalSolicitudes = Number(dashboardTotalsGlobal?.totalSolicitudes || (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalSolicitudes || 0), 0));
+  const totalImporte = Number(dashboardTotalsGlobal?.totalImporte || (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalCosto || 0), 0));
   const porcentajeUso = presupuestoGlobal > 0 ? (totalImporte / presupuestoGlobal) * 100 : 0;
   const presupuestoRestante = Math.max(0, Number(presupuestoGlobal || 0) - Number(totalImporte || 0));
 
