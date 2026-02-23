@@ -605,6 +605,20 @@ export const dbService = {
     return () => unsub();
   },
 
+  async rebuildDashboardGlobalTotals(adminUser: User): Promise<void> {
+    if (adminUser.role !== Role.ADMIN_SISTEMA) {
+      throw new AuthError('UNAUTHORIZED', 'Solo admin puede recalcular los totales globales.');
+    }
+    const qAll = query(collection(db, 'tramites'), limit(2000));
+    const snap = await getDocs(qAll);
+    const totalSolicitudes = snap.size;
+    const totalImporte = snap.docs.reduce((acc, d) => acc + Number((d.data() as any)?.costoSolicitud || 0), 0);
+    await setDoc(doc(db, 'configuracion', 'global'), {
+      totalSolicitudesGlobal: totalSolicitudes,
+      totalImporteGlobal: totalImporte,
+    }, { merge: true });
+  },
+
   async getUsers(): Promise<User[]> {
     const q = query(collection(db, 'usuarios'), orderBy('nombre', 'asc'));
     const querySnapshot = await getDocs(q);
@@ -816,6 +830,8 @@ export const dbService = {
           dotacionNumero: nextDotacionNumero,
           requiereDictamenMedico: nextDotacionNumero >= 3,
           creadorId: user.id,
+          creadorNombre: user.nombre,
+          creadorMatricula: user.matricula,
           unidad: user.unidad
         });
 

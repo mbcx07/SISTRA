@@ -155,6 +155,16 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
+    const runAdminRebuild = async () => {
+      if (user.role !== Role.ADMIN_SISTEMA) return;
+      try {
+        await dbService.rebuildDashboardGlobalTotals(user);
+      } catch {
+        // noop
+      }
+    };
+    void runAdminRebuild();
+
     const loadPresupuestoGlobal = async () => {
       try {
         const remote = await dbService.getPresupuestoGlobal();
@@ -1279,6 +1289,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
         <tr>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Identificador</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Solicitante</th>
+          <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest">Operador captura</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-center">Estatus Cloud</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">Costo solicitud</th>
           <th scope="col" className="px-10 py-8 text-[11px] font-black text-white/60 uppercase tracking-widest text-right">Accion</th>
@@ -1294,6 +1305,10 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
             <td className="px-10 py-8">
               <p className="font-black text-slate-800 text-sm uppercase">{[t.beneficiario?.nombre, t.beneficiario?.apellidoPaterno, t.beneficiario?.apellidoMaterno].filter(Boolean).join(' ') || 'N/A'}</p>
               <p className="text-[10px] text-imss font-black mt-1">NSS: {t.beneficiario?.nssTrabajador || 'SIN NSS'}</p>
+            </td>
+            <td className="px-10 py-8">
+              <p className="font-black text-slate-700 text-xs uppercase">{String((t as any).creadorNombre || 'SIN DATO')}</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-1">{String((t as any).creadorMatricula || (t as any).creadorId || 'N/D')}</p>
             </td>
             <td className="px-10 py-8 text-center">
               <span className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${(COLOR_ESTATUS as any)[t.estatus]}`}>
@@ -1311,7 +1326,7 @@ const TramitesListView = ({ tramites, onSelect, searchTerm = '' }: any) => (
           </tr>
         )) : (
           <tr>
-            <td colSpan={5} className="px-10 py-32 text-center text-slate-400 font-black uppercase tracking-[0.2em]">
+            <td colSpan={6} className="px-10 py-32 text-center text-slate-400 font-black uppercase tracking-[0.2em]">
               {searchTerm ? `Sin coincidencias para "${searchTerm}".` : 'Sin registros sincronizados'}
             </td>
           </tr>

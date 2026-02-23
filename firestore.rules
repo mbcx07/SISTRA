@@ -158,6 +158,12 @@ service cloud.firestore {
       allow update, delete: if activeUser() && isAdmin();
     }
 
+    // Configuración global (presupuesto + métricas globales del tablero)
+    match /configuracion/{docId} {
+      allow read: if activeUser();
+      allow create, update, delete: if activeUser() && isAdmin();
+    }
+
     // Deny-all por defecto fuera de matches explícitos
   }
 }
