@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import {
   getFirestore,
   collection,
@@ -25,7 +26,6 @@ import {
   setPersistence,
   inMemoryPersistence,
   browserSessionPersistence,
-  sendPasswordResetEmail,
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword
@@ -46,6 +46,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const functions = getFunctions(app);
 const authPersistenceReady = setPersistence(auth, browserSessionPersistence).catch((error) => {
   console.warn('No se pudo establecer persistencia de sesion en navegador.', error);
 });
@@ -477,16 +478,17 @@ export const adminCreateCapturista = async (
 export const adminResetPassword = async (
   adminUser: User,
   userId: string,
-  _newPassword: string
+  newPassword: string
 ): Promise<void> => {
   if (adminUser.role !== Role.ADMIN_SISTEMA) throw new AuthError('UNAUTHORIZED', 'Solo admin puede resetear contrasenas.');
 
-  const userDoc = await getDoc(doc(db, 'usuarios', userId));
-  if (!userDoc.exists()) throw new Error('Usuario no encontrado.');
+  const issues = validatePasswordStrength(newPassword);
+  if (issues.length > 0) {
+    throw new AuthError('WEAK_PASSWORD', `Contrasena insegura: ${issues.join(' ')}`);
+  }
 
-  const user = userDoc.data() as User;
-  const email = user.authEmail || matriculaToEmail(user.matricula);
-  await sendPasswordResetEmail(auth, email);
+  const call = httpsCallable(functions, 'adminResetUserPassword');
+  await call({ userId, newPassword });
 };
 
 export const changeOwnPassword = async (
@@ -570,7 +572,7 @@ export const dbService = {
         const unidad = String(t.unidad || t?.beneficiario?.entidadLaboral || 'SIN_UNIDAD');
         if (!acc[unidad]) acc[unidad] = { totalSolicitudes: 0, totalCosto: 0 };
         acc[unidad].totalSolicitudes += 1;
-        acc[unidad].totalCosto += Number(t.costoSolicitud || 0);
+        acc[unidad].totalCosto += resolveTramiteImporte(t);
         return acc;
       }, {});
 
