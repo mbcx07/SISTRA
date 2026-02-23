@@ -151,6 +151,21 @@ const App: React.FC = () => {
   }, [presupuestoGlobal]);
 
   useEffect(() => {
+    const loadPresupuestoGlobal = async () => {
+      if (!user) return;
+      try {
+        const remote = await dbService.getPresupuestoGlobal();
+        if (remote !== null) {
+          setPresupuestoGlobal(remote);
+        }
+      } catch {
+        // fallback local storage
+      }
+    };
+    void loadPresupuestoGlobal();
+  }, [user]);
+
+  useEffect(() => {
     localStorage.setItem('sistra.cctCatalog', JSON.stringify(cctCatalog));
   }, [cctCatalog]);
 
@@ -283,6 +298,12 @@ const App: React.FC = () => {
     setUserMenuOpen(false);
     setShowChangePasswordModal(false);
     setUiMessage('sesión cerrada correctamente.');
+  };
+
+  const handleSavePresupuestoGlobal = async (value: number) => {
+    if (!user) return;
+    await dbService.setPresupuestoGlobal(user, value);
+    setPresupuestoGlobal(Math.max(0, Number(value || 0)));
   };
 
   const gastoMetrics = useMemo(() => {
@@ -814,7 +835,7 @@ const App: React.FC = () => {
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
             {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} tramites={tramites} cctCatalog={cctCatalog} uiMessage={uiMessage} clearUiMessage={() => setUiMessage(null)} onSave={handleCreateTramite} onPrint={handlePrintForTramite} onPreviewPrint={handlePreviewPrint} onImprocedente={handleImprocedenteIntent} /> : <AccessDeniedView />)}
             {/* central view removida por operacion */}
-            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} cctCatalog={cctCatalog} onSaveCctCatalog={setCctCatalog} presupuestoGlobal={presupuestoGlobal} onSavePresupuestoGlobal={setPresupuestoGlobal} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
+            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} cctCatalog={cctCatalog} onSaveCctCatalog={setCctCatalog} presupuestoGlobal={presupuestoGlobal} onSavePresupuestoGlobal={handleSavePresupuestoGlobal} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
           </div>
         </main>
 
@@ -923,7 +944,7 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
   );
 };
 
-const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, presupuestoGlobal, onSavePresupuestoGlobal, onChangePassword, onLogout }: { currentUser: User; cctCatalog: string[]; onSaveCctCatalog: (values: string[]) => void; presupuestoGlobal: number; onSavePresupuestoGlobal: (value: number) => void; onChangePassword: () => void; onLogout: () => void }) => {
+const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, presupuestoGlobal, onSavePresupuestoGlobal, onChangePassword, onLogout }: { currentUser: User; cctCatalog: string[]; onSaveCctCatalog: (values: string[]) => void; presupuestoGlobal: number; onSavePresupuestoGlobal: (value: number) => Promise<void>; onChangePassword: () => void; onLogout: () => void }) => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [nuevoCct, setNuevoCct] = useState('');
   const [nombre, setNombre] = useState('');
@@ -969,9 +990,13 @@ const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, presupuesto
           />
           <button
             className="px-4 py-2 rounded-xl bg-imss text-white text-sm font-black"
-            onClick={() => {
-              onSavePresupuestoGlobal(Math.max(0, Number(presupuestoDraft || 0)));
-              setFeedback('Presupuesto global actualizado.');
+            onClick={async () => {
+              try {
+                await onSavePresupuestoGlobal(Math.max(0, Number(presupuestoDraft || 0)));
+                setFeedback('Presupuesto global actualizado y sincronizado.');
+              } catch (e: any) {
+                setFeedback(e?.message || 'No se pudo guardar el presupuesto global.');
+              }
             }}
           >Guardar presupuesto</button>
         </div>

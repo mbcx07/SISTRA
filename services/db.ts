@@ -527,6 +527,24 @@ export const changeOwnPassword = async (
 };
 
 export const dbService = {
+  async getPresupuestoGlobal(): Promise<number | null> {
+    try {
+      const cfgDoc = await getDoc(doc(db, 'configuracion', 'global'));
+      if (!cfgDoc.exists()) return null;
+      const raw = Number((cfgDoc.data() as any)?.presupuestoGlobal);
+      return Number.isFinite(raw) && raw >= 0 ? raw : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async setPresupuestoGlobal(adminUser: User, value: number): Promise<void> {
+    if (adminUser.role !== Role.ADMIN_SISTEMA) {
+      throw new AuthError('UNAUTHORIZED', 'Solo admin puede actualizar el presupuesto global.');
+    }
+    await setDoc(doc(db, 'configuracion', 'global'), { presupuestoGlobal: Math.max(0, Number(value || 0)) }, { merge: true });
+  },
+
   async getUsers(): Promise<User[]> {
     const q = query(collection(db, 'usuarios'), orderBy('nombre', 'asc'));
     const querySnapshot = await getDocs(q);
