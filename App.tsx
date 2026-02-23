@@ -192,11 +192,6 @@ const App: React.FC = () => {
 
     const applyGlobalTotals = (totals: any) => {
       setDashboardTotalsGlobal(totals);
-      const rows = Array.isArray(totals?.resumenPorUnidad) ? totals.resumenPorUnidad : null;
-      if (rows && rows.length > 0) {
-        setResumenSolicitudesGlobal(rows);
-        localStorage.setItem('sistra.resumenGlobalCache', JSON.stringify(rows));
-      }
     };
 
     const unsubscribeResumen = dbService.watchResumenSolicitudesGlobal((rows) => {

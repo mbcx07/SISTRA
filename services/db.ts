@@ -133,8 +133,32 @@ const parseMoneyLike = (value: any): number => {
 };
 
 const resolveTramiteImporte = (t: any): number => {
-  const v = t?.importeAutorizado ?? t?.importeSolicitado ?? t?.costoSolicitud ?? 0;
-  return parseMoneyLike(v);
+  const preferred = [
+    t?.importeAutorizado,
+    t?.importeSolicitado,
+    t?.costoSolicitud,
+    t?.importe,
+    t?.monto,
+    t?.montoAutorizado,
+    t?.montoSolicitado,
+    t?.costo,
+    t?.costoTotal,
+    t?.total
+  ];
+
+  for (const candidate of preferred) {
+    const v = parseMoneyLike(candidate);
+    if (v > 0) return v;
+  }
+
+  // fallback: detectar cualquier campo de primer nivel que parezca importe/costo/monto
+  const dynamic = Object.entries(t || {})
+    .filter(([k]) => /importe|monto|costo|total/i.test(String(k)))
+    .map(([, v]) => parseMoneyLike(v))
+    .filter((n) => n > 0)
+    .sort((a, b) => b - a);
+
+  return dynamic[0] || 0;
 };
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
