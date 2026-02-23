@@ -772,14 +772,22 @@ const App: React.FC = () => {
 
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 p-2">
+                    {canAccessTab('adminUsers') && (
+                      <button
+                        className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                        onClick={() => {
+                          setActiveTab('adminUsers');
+                          setUserMenuOpen(false);
+                        }}
+                      >
+                        <Settings size={16} /> Ir a Configuracion
+                      </button>
+                    )}
                     <button
-                      className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                      onClick={() => {
-                        setActiveTab('adminUsers');
-                        setUserMenuOpen(false);
-                      }}
+                      className="w-full text-left px-3 py-3 text-sm font-bold rounded-xl hover:bg-red-50 text-red-700 flex items-center gap-2"
+                      onClick={handleLogout}
                     >
-                      <Settings size={16} /> Ir a Configuracion
+                      <LogOut size={16} /> Cerrar sesión
                     </button>
                   </div>
                 )}
@@ -800,14 +808,13 @@ const App: React.FC = () => {
                 chartData={chartData}
                 gastoMetrics={gastoMetrics}
                 presupuestoGlobal={presupuestoGlobal}
-                onUpdatePresupuesto={setPresupuestoGlobal}
                 resumenSolicitudesPorUnidad={resumenSolicitudesPorUnidad}
               />
             )}
             {activeTab === 'tramites' && <TramitesListView tramites={filteredTramites} onSelect={setSelectedTramite} searchTerm={searchTerm} />}
             {activeTab === 'nuevo' && (canAccessTab('nuevo') ? <NuevoTramiteWizard user={user!} tramites={tramites} cctCatalog={cctCatalog} uiMessage={uiMessage} clearUiMessage={() => setUiMessage(null)} onSave={handleCreateTramite} onPrint={handlePrintForTramite} onPreviewPrint={handlePreviewPrint} onImprocedente={handleImprocedenteIntent} /> : <AccessDeniedView />)}
             {/* central view removida por operacion */}
-            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} cctCatalog={cctCatalog} onSaveCctCatalog={setCctCatalog} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
+            {activeTab === 'adminUsers' && (canAccessTab('adminUsers') ? <AdminUsersView currentUser={user} cctCatalog={cctCatalog} onSaveCctCatalog={setCctCatalog} presupuestoGlobal={presupuestoGlobal} onSavePresupuestoGlobal={setPresupuestoGlobal} onChangePassword={() => setShowChangePasswordModal(true)} onLogout={handleLogout} /> : <AccessDeniedView />)}
           </div>
         </main>
 
@@ -916,7 +923,7 @@ const LoginView = ({ onLogin, loading, error, infoMessage }: any) => {
   );
 };
 
-const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, onChangePassword, onLogout }: { currentUser: User; cctCatalog: string[]; onSaveCctCatalog: (values: string[]) => void; onChangePassword: () => void; onLogout: () => void }) => {
+const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, presupuestoGlobal, onSavePresupuestoGlobal, onChangePassword, onLogout }: { currentUser: User; cctCatalog: string[]; onSaveCctCatalog: (values: string[]) => void; presupuestoGlobal: number; onSavePresupuestoGlobal: (value: number) => void; onChangePassword: () => void; onLogout: () => void }) => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [nuevoCct, setNuevoCct] = useState('');
   const [nombre, setNombre] = useState('');
@@ -930,6 +937,11 @@ const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, onChangePas
   const [resetPasswordByUser, setResetPasswordByUser] = useState<Record<string, string>>({});
   const [editRoleByUser, setEditRoleByUser] = useState<Record<string, Role>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [presupuestoDraft, setPresupuestoDraft] = useState<number>(Number(presupuestoGlobal || 0));
+
+  useEffect(() => {
+    setPresupuestoDraft(Number(presupuestoGlobal || 0));
+  }, [presupuestoGlobal]);
 
   const ROLES_PERMITIDOS: Role[] = [Role.CAPTURISTA_UNIDAD, Role.ADMIN_SISTEMA];
 
@@ -941,6 +953,28 @@ const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, onChangePas
       <div className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-wrap gap-3">
         <button className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold" onClick={onChangePassword}>Cambiar contraseña</button>
         <button className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-black" onClick={onLogout}>Cerrar sesión</button>
+      </div>
+
+      <div className="bg-white rounded-3xl p-6 border border-slate-100 space-y-3">
+        <h3 className="font-black uppercase">Configuración de presupuesto global</h3>
+        <p className="text-xs font-semibold text-slate-500">Solo administradores pueden cambiar el presupuesto total mostrado en tablero.</p>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            className="flex-1 p-3 border rounded-xl"
+            value={presupuestoDraft}
+            onChange={(e) => setPresupuestoDraft(Number(e.target.value || 0))}
+          />
+          <button
+            className="px-4 py-2 rounded-xl bg-imss text-white text-sm font-black"
+            onClick={() => {
+              onSavePresupuestoGlobal(Math.max(0, Number(presupuestoDraft || 0)));
+              setFeedback('Presupuesto global actualizado.');
+            }}
+          >Guardar presupuesto</button>
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl p-6 border border-slate-100 space-y-3">
@@ -1105,7 +1139,7 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
   </button>
 );
 
-const DashboardView = ({ presupuestoGlobal, onUpdatePresupuesto, resumenSolicitudesPorUnidad }: any) => {
+const DashboardView = ({ presupuestoGlobal, resumenSolicitudesPorUnidad }: any) => {
   const totalSolicitudes = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalSolicitudes || 0), 0);
   const totalImporte = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalCosto || 0), 0);
   const porcentajeUso = presupuestoGlobal > 0 ? (totalImporte / presupuestoGlobal) * 100 : 0;
@@ -1116,15 +1150,9 @@ const DashboardView = ({ presupuestoGlobal, onUpdatePresupuesto, resumenSolicitu
       <div className="bg-white rounded-[32px] border border-slate-100 p-6 lg:p-8 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6 items-end">
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto</label>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={presupuestoGlobal}
-              onChange={(e) => onUpdatePresupuesto(Number(e.target.value || 0))}
-              className="w-full p-3 rounded-xl border-2 border-slate-200 font-black text-imss"
-            />
+            <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto</p>
+            <p className="text-2xl font-black text-imss">{formatCurrency(presupuestoGlobal)}</p>
+            <p className="text-[10px] text-slate-500 font-bold mt-1">Editable solo en Configuración (Admin).</p>
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Total solicitudes</p>
