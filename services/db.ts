@@ -12,7 +12,8 @@ import {
   where,
   orderBy,
   limit,
-  deleteDoc
+  deleteDoc,
+  onSnapshot
 } from "firebase/firestore";
 import {
   getAuth,
@@ -543,6 +544,16 @@ export const dbService = {
       throw new AuthError('UNAUTHORIZED', 'Solo admin puede actualizar el presupuesto global.');
     }
     await setDoc(doc(db, 'configuracion', 'global'), { presupuestoGlobal: Math.max(0, Number(value || 0)) }, { merge: true });
+  },
+
+  watchPresupuestoGlobal(onValue: (value: number) => void): () => void {
+    const ref = doc(db, 'configuracion', 'global');
+    const unsub = onSnapshot(ref, (snap) => {
+      if (!snap.exists()) return;
+      const raw = Number((snap.data() as any)?.presupuestoGlobal);
+      if (Number.isFinite(raw) && raw >= 0) onValue(raw);
+    });
+    return () => unsub();
   },
 
   async getUsers(): Promise<User[]> {

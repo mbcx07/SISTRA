@@ -151,8 +151,9 @@ const App: React.FC = () => {
   }, [presupuestoGlobal]);
 
   useEffect(() => {
+    if (!user) return;
+
     const loadPresupuestoGlobal = async () => {
-      if (!user) return;
       try {
         const remote = await dbService.getPresupuestoGlobal();
         if (remote !== null) {
@@ -163,6 +164,12 @@ const App: React.FC = () => {
       }
     };
     void loadPresupuestoGlobal();
+
+    const unsubscribe = dbService.watchPresupuestoGlobal((value) => {
+      setPresupuestoGlobal(value);
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   useEffect(() => {
