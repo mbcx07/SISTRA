@@ -115,6 +115,11 @@ const getUniqueDotacionCount = (items: Tramite[]): number => {
   }
   return nums.size || (items || []).length;
 };
+
+const resolveTramiteImporte = (t: any): number => {
+  const v = Number(t?.importeAutorizado ?? t?.importeSolicitado ?? t?.costoSolicitud ?? 0);
+  return Number.isFinite(v) ? v : 0;
+};
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
   '99032103': 'moises.beltran@imss.gob.mx',
@@ -612,7 +617,7 @@ export const dbService = {
     const qAll = query(collection(db, 'tramites'), limit(2000));
     const snap = await getDocs(qAll);
     const totalSolicitudes = snap.size;
-    const totalImporte = snap.docs.reduce((acc, d) => acc + Number((d.data() as any)?.costoSolicitud || 0), 0);
+    const totalImporte = snap.docs.reduce((acc, d) => acc + resolveTramiteImporte(d.data() as any), 0);
     await setDoc(doc(db, 'configuracion', 'global'), {
       totalSolicitudesGlobal: totalSolicitudes,
       totalImporteGlobal: totalImporte,
@@ -755,12 +760,12 @@ export const dbService = {
         const { id, ...data } = tramite;
         await updateDoc(docRef, data);
 
-        const prevCosto = Number((previo as any)?.costoSolicitud || 0);
-        const nextCosto = Number((({ ...previo, ...data } as any)?.costoSolicitud) || 0);
-        const deltaCosto = nextCosto - prevCosto;
-        if (deltaCosto !== 0) {
+        const prevImporte = resolveTramiteImporte(previo as any);
+        const nextImporte = resolveTramiteImporte({ ...previo, ...data } as any);
+        const deltaImporte = nextImporte - prevImporte;
+        if (deltaImporte !== 0) {
           await setDoc(doc(db, 'configuracion', 'global'), {
-            totalImporteGlobal: increment(deltaCosto)
+            totalImporteGlobal: increment(deltaImporte)
           }, { merge: true });
         }
 
@@ -823,6 +828,7 @@ export const dbService = {
 
         const nextDotacionNumero = Math.min(4, totalDotacionesUnicas + 1);
         const costoSolicitud = Number(tramite.costoSolicitud || 0);
+        const importeInicial = resolveTramiteImporte({ ...tramite, costoSolicitud });
         const docRef = await addDoc(collection(db, "tramites"), {
           ...tramite,
           costoSolicitud,
@@ -837,7 +843,7 @@ export const dbService = {
 
         await setDoc(doc(db, 'configuracion', 'global'), {
           totalSolicitudesGlobal: increment(1),
-          totalImporteGlobal: increment(costoSolicitud)
+          totalImporteGlobal: increment(importeInicial)
         }, { merge: true });
 
         return docRef.id;
@@ -865,7 +871,7 @@ export const dbService = {
 
     await setDoc(doc(db, 'configuracion', 'global'), {
       totalSolicitudesGlobal: increment(-1),
-      totalImporteGlobal: increment(-Number((previo as any)?.costoSolicitud || 0))
+      totalImporteGlobal: increment(-resolveTramiteImporte(previo as any))
     }, { merge: true });
   },
 
