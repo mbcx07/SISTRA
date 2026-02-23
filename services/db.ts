@@ -151,14 +151,22 @@ const resolveTramiteImporte = (t: any): number => {
     if (v > 0) return v;
   }
 
-  // fallback: detectar cualquier campo de primer nivel que parezca importe/costo/monto
-  const dynamic = Object.entries(t || {})
-    .filter(([k]) => /importe|monto|costo|total/i.test(String(k)))
-    .map(([, v]) => parseMoneyLike(v))
-    .filter((n) => n > 0)
-    .sort((a, b) => b - a);
+  const candidates: number[] = [];
+  const walk = (obj: any, depth: number) => {
+    if (!obj || typeof obj !== 'object' || depth > 3) return;
+    for (const [k, v] of Object.entries(obj)) {
+      const key = String(k || '');
+      if (/importe|monto|costo|total/i.test(key)) {
+        const parsed = parseMoneyLike(v);
+        if (parsed > 0) candidates.push(parsed);
+      }
+      if (v && typeof v === 'object') walk(v, depth + 1);
+    }
+  };
+  walk(t, 0);
 
-  return dynamic[0] || 0;
+  candidates.sort((a, b) => b - a);
+  return candidates[0] || 0;
 };
 const PRIMARY_ADMIN_MATRICULA = '99032103';
 const MATRICULA_EMAIL_OVERRIDES: Record<string, string> = {
