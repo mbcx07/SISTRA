@@ -301,11 +301,21 @@ const App: React.FC = () => {
   ];
 
   const resumenSolicitudesPorUnidad = useMemo(() => {
+    const toMoney = (v: any) => {
+      const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(',', '.'));
+      return Number.isFinite(n) ? n : 0;
+    };
+
     const map = (tramites || []).reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, t: Tramite) => {
+      if (!String((t as any)?.folio || '').trim()) return acc;
+      if (!String((t as any)?.fechaCreacion || '').trim()) return acc;
+      if ((t as any)?.eliminado === true) return acc;
+
       const unidad = t.unidad || t.beneficiario?.entidadLaboral || 'SIN_UNIDAD';
+      const importe = toMoney((t as any).importeAutorizado ?? (t as any).importeSolicitado ?? (t as any).costoSolicitud ?? (t as any).importe ?? (t as any).monto ?? 0);
       if (!acc[unidad]) acc[unidad] = { totalSolicitudes: 0, totalCosto: 0 };
       acc[unidad].totalSolicitudes += 1;
-      acc[unidad].totalCosto += Number(t.costoSolicitud || 0);
+      acc[unidad].totalCosto += importe;
       return acc;
     }, {});
 
@@ -872,7 +882,7 @@ const App: React.FC = () => {
                 chartData={chartData}
                 gastoMetrics={gastoMetrics}
                 presupuestoGlobal={presupuestoGlobal}
-                resumenSolicitudesPorUnidad={resumenSolicitudesGlobal}
+                resumenSolicitudesPorUnidad={resumenSolicitudesPorUnidad}
                 dashboardTotalsGlobal={dashboardTotalsGlobal}
               />
             )}
