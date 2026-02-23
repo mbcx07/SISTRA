@@ -84,15 +84,7 @@ const App: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [captureEditTarget, setCaptureEditTarget] = useState<Tramite | null>(null);
-  const [resumenSolicitudesGlobal, setResumenSolicitudesGlobal] = useState<Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>>(() => {
-    try {
-      const raw = localStorage.getItem('sistra.resumenGlobalCache');
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
+  const [resumenSolicitudesGlobal, setResumenSolicitudesGlobal] = useState<Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>>([]);
   const [dashboardTotalsGlobal, setDashboardTotalsGlobal] = useState<{ totalSolicitudes: number; totalImporte: number; resumenPorUnidad: Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }> } | null>(null);
   const [presupuestoGlobal, setPresupuestoGlobal] = useState<number>(() => {
     const raw = localStorage.getItem('sistra.presupuestoGlobal');
@@ -197,7 +189,6 @@ const App: React.FC = () => {
     const unsubscribeResumen = dbService.watchResumenSolicitudesGlobal((rows) => {
       const safeRows = Array.isArray(rows) ? rows : [];
       setResumenSolicitudesGlobal(safeRows);
-      localStorage.setItem('sistra.resumenGlobalCache', JSON.stringify(safeRows));
     });
 
     const loadDashboardTotals = async () => {

@@ -614,7 +614,7 @@ export const dbService = {
   },
 
   watchResumenSolicitudesGlobal(onValue: (rows: Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>) => void): () => void {
-    const q = query(collection(db, 'tramites'), limit(1000));
+    const q = query(collection(db, 'tramites'), limit(3000));
     const unsub = onSnapshot(q, (snap) => {
       const map = (snap.docs || []).reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, d) => {
         const t: any = d.data() || {};
@@ -630,6 +630,8 @@ export const dbService = {
         .sort((a, b) => a.unidad.localeCompare(b.unidad));
 
       onValue(rows);
+    }, () => {
+      onValue([]);
     });
     return () => unsub();
   },
