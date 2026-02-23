@@ -84,7 +84,15 @@ const App: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [captureEditTarget, setCaptureEditTarget] = useState<Tramite | null>(null);
-  const [resumenSolicitudesGlobal, setResumenSolicitudesGlobal] = useState<Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>>([]);
+  const [resumenSolicitudesGlobal, setResumenSolicitudesGlobal] = useState<Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }>>(() => {
+    try {
+      const raw = localStorage.getItem('sistra.resumenGlobalCache');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [dashboardTotalsGlobal, setDashboardTotalsGlobal] = useState<{ totalSolicitudes: number; totalImporte: number; resumenPorUnidad: Array<{ unidad: string; totalSolicitudes: number; totalCosto: number }> } | null>(null);
   const [presupuestoGlobal, setPresupuestoGlobal] = useState<number>(() => {
     const raw = localStorage.getItem('sistra.presupuestoGlobal');
@@ -187,6 +195,7 @@ const App: React.FC = () => {
       const rows = Array.isArray(totals?.resumenPorUnidad) ? totals.resumenPorUnidad : null;
       if (rows && rows.length > 0) {
         setResumenSolicitudesGlobal(rows);
+        localStorage.setItem('sistra.resumenGlobalCache', JSON.stringify(rows));
       }
     };
 
@@ -870,7 +879,7 @@ const App: React.FC = () => {
                 chartData={chartData}
                 gastoMetrics={gastoMetrics}
                 presupuestoGlobal={presupuestoGlobal}
-                resumenSolicitudesPorUnidad={resumenSolicitudesGlobal.length ? resumenSolicitudesGlobal : resumenSolicitudesPorUnidad}
+                resumenSolicitudesPorUnidad={resumenSolicitudesGlobal}
                 dashboardTotalsGlobal={dashboardTotalsGlobal}
               />
             )}
@@ -998,6 +1007,7 @@ const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, presupuesto
   const [showPassword, setShowPassword] = useState(false);
   const [showResetPasswordByUser, setShowResetPasswordByUser] = useState<Record<string, boolean>>({});
   const [resetPasswordByUser, setResetPasswordByUser] = useState<Record<string, string>>({});
+  const [resetFeedbackByUser, setResetFeedbackByUser] = useState<Record<string, string>>({});
   const [editRoleByUser, setEditRoleByUser] = useState<Record<string, Role>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
   const [presupuestoDraft, setPresupuestoDraft] = useState<number>(Number(presupuestoGlobal || 0));
@@ -1150,7 +1160,7 @@ const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, presupuesto
                   } catch(e:any){ setFeedback(e?.message || 'No se pudo eliminar el usuario.'); }
                 }}>Eliminar</button>
               </div>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex gap-2 items-center">
                 <div className="relative flex-1">
                   <input
                     type={showResetPasswordByUser[u.id] ? 'text' : 'password'}
@@ -1172,16 +1182,25 @@ const AdminUsersView = ({ currentUser, cctCatalog, onSaveCctCatalog, presupuesto
                   const candidate = (resetPasswordByUser[u.id] || '').trim();
                   const issues = validatePasswordStrength(candidate);
                   if (issues.length > 0) {
-                    setFeedback(`No se pudo resetear a ${u.matricula}. ${issues.join(' ')}`);
+                    const msg = `No se pudo resetear a ${u.matricula}. ${issues.join(' ')}`;
+                    setFeedback(msg);
+                    setResetFeedbackByUser(prev => ({ ...prev, [u.id]: msg }));
                     return;
                   }
                   try {
                     await adminResetPassword(currentUser, u.id, candidate);
                     setResetPasswordByUser(prev => ({ ...prev, [u.id]: '' }));
-                    setFeedback(`Correo de restablecimiento enviado para ${u.matricula}.`);
+                    const okMsg = `Contraseña actualizada correctamente para ${u.matricula}.`;
+                    setFeedback(okMsg);
+                    setResetFeedbackByUser(prev => ({ ...prev, [u.id]: okMsg }));
                   }
-                  catch(e:any){ setFeedback(e?.message || 'No se pudo resetear la contraseña.'); }
+                  catch(e:any){ 
+                    const errMsg = e?.message || 'No se pudo resetear la contraseña.';
+                    setFeedback(errMsg);
+                    setResetFeedbackByUser(prev => ({ ...prev, [u.id]: errMsg }));
+                  }
                 }}>Reset</button>
+                {resetFeedbackByUser[u.id] && <span className="text-[10px] text-slate-600 font-semibold">{resetFeedbackByUser[u.id]}</span>}
               </div>
             </div>
           ))}
