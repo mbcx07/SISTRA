@@ -1203,8 +1203,8 @@ const SidebarItem = ({ icon, label, active, onClick }: any) => (
 );
 
 const DashboardView = ({ presupuestoGlobal, resumenSolicitudesPorUnidad, dashboardTotalsGlobal }: any) => {
-  const totalSolicitudes = Number(dashboardTotalsGlobal?.totalSolicitudes ?? (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalSolicitudes || 0), 0));
-  const totalImporte = Number(dashboardTotalsGlobal?.totalImporte ?? (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalCosto || 0), 0));
+  const totalSolicitudes = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalSolicitudes || 0), 0);
+  const totalImporte = (resumenSolicitudesPorUnidad || []).reduce((acc: number, r: any) => acc + Number(r.totalCosto || 0), 0);
   const porcentajeUso = presupuestoGlobal > 0 ? (totalImporte / presupuestoGlobal) * 100 : 0;
   const presupuestoRestante = Math.max(0, Number(presupuestoGlobal || 0) - Number(totalImporte || 0));
 
@@ -1215,8 +1215,7 @@ const DashboardView = ({ presupuestoGlobal, resumenSolicitudesPorUnidad, dashboa
           <div>
             <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Presupuesto</p>
             <p className="text-2xl font-black text-imss">{formatCurrency(presupuestoGlobal)}</p>
-            <p className="text-[10px] text-slate-500 font-bold mt-1">Editable solo en Configuración (Admin).</p>
-          </div>
+                      </div>
           <div>
             <p className="text-[10px] font-black text-slate-500 uppercase mb-2">Total solicitudes</p>
             <p className="text-2xl font-black text-slate-800">{totalSolicitudes}</p>
@@ -2500,6 +2499,7 @@ const CentralView = ({ tramites }: any) => (
 );
 
 export default App;
+
 
 
 
