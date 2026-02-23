@@ -618,6 +618,11 @@ export const dbService = {
     const unsub = onSnapshot(q, (snap) => {
       const map = (snap.docs || []).reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, d) => {
         const t: any = d.data() || {};
+        // Mantener coherencia con listados: ignorar documentos incompletos/huérfanos
+        if (!String(t?.folio || '').trim()) return acc;
+        if (!String(t?.fechaCreacion || '').trim()) return acc;
+        if (t?.eliminado === true) return acc;
+
         const unidad = String(t.unidad || t?.beneficiario?.entidadLaboral || 'SIN_UNIDAD');
         if (!acc[unidad]) acc[unidad] = { totalSolicitudes: 0, totalCosto: 0 };
         acc[unidad].totalSolicitudes += 1;
@@ -671,10 +676,18 @@ export const dbService = {
     }
     const qAll = query(collection(db, 'tramites'), limit(2000));
     const snap = await getDocs(qAll);
-    const totalSolicitudes = snap.size;
-    const totalImporte = snap.docs.reduce((acc, d) => acc + resolveTramiteImporte(d.data() as any), 0);
+    const validDocs = (snap.docs || []).filter((d) => {
+      const t: any = d.data() || {};
+      if (!String(t?.folio || '').trim()) return false;
+      if (!String(t?.fechaCreacion || '').trim()) return false;
+      if (t?.eliminado === true) return false;
+      return true;
+    });
 
-    const map = (snap.docs || []).reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, d) => {
+    const totalSolicitudes = validDocs.length;
+    const totalImporte = validDocs.reduce((acc, d) => acc + resolveTramiteImporte(d.data() as any), 0);
+
+    const map = validDocs.reduce((acc: Record<string, { totalSolicitudes: number; totalCosto: number }>, d) => {
       const t: any = d.data() || {};
       const unidad = String(t.unidad || t?.beneficiario?.entidadLaboral || 'SIN_UNIDAD');
       if (!acc[unidad]) acc[unidad] = { totalSolicitudes: 0, totalCosto: 0 };
